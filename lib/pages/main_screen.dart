@@ -4,61 +4,37 @@ import '../widgets/custom_bottom_navbar.dart';
 import 'LoginScreen.dart';
 
 class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
+
   @override
   _MainScreenState createState() => _MainScreenState();
-}
+} 
 
 class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   final AuthService _authService = AuthService();
-  bool _isLoggingOut = false;
   int _currentIndex = 0;
-
-  // User data variables
-  String _userName = 'Pengguna SiagaDarah';
-  String _userBloodType = '-';
   int _donationCount = 0;
   bool _isLoading = true;
-
+  bool _isLoggingOut = false;
   // Mode Siaga variables
   bool _isSiagaMode = false;
-  bool _isTogglingMode = false;
 
-  // Removed AnimationController and Animation for the pulsing effect,
-  // as the new design does not require it.
-  // late AnimationController _pulseController;
-  // late Animation<double> _pulseAnimation;
+  bool _isTogglingMode = false;
+  String _userBloodType = '-';
+  // User data variables
+  String _userName = 'Pengguna SiagaDarah';
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
 
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
-    // Removed _initializeAnimations() call as pulsing effect is removed
-  }
-
-  // Removed _initializeAnimations() method as pulsing effect is removed
-  // void _initializeAnimations() {
-  //   _pulseController = AnimationController(
-  //     duration: Duration(seconds: 2),
-  //     vsync: this,
-  //   );
-  //   _pulseAnimation = Tween<double>(
-  //     begin: 1.0,
-  //     end: 1.2,
-  //   ).animate(CurvedAnimation(
-  //     parent: _pulseController,
-  //     curve: Curves.easeInOut,
-  //   ));
-
-  //   _pulseController.repeat(reverse: true);
-  // }
-
-  @override
-  void dispose() {
-    // Dispose the controller only if it was initialized.
-    // If you decide to bring back animations later, uncomment this line.
-    // _pulseController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -105,7 +81,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 _isSiagaMode ? Icons.notification_important : Icons.notifications_active,
                 color: _isSiagaMode ? Colors.orange : Colors.red.shade400,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(_isSiagaMode ? 'Nonaktifkan Mode Siaga?' : 'Aktifkan Mode Siaga?'),
             ],
           ),
@@ -116,9 +92,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               Text(_isSiagaMode
                   ? 'Anda tidak akan menerima notifikasi darurat kebutuhan donor darah.'
                   : 'Anda akan menerima notifikasi darurat saat ada kebutuhan donor darah sesuai golongan darah Anda.'),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Container(
-                padding: EdgeInsets.all(12),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: (_isSiagaMode ? Colors.orange : Colors.red.shade400).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -130,7 +106,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       size: 16,
                       color: _isSiagaMode ? Colors.orange.shade700 : Colors.red.shade600,
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         _isSiagaMode
@@ -194,14 +170,14 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       color: Colors.white,
                       size: 20,
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Text(_isSiagaMode
                         ? 'Mode Siaga Diaktifkan! Anda akan mendapat notifikasi darurat.'
                         : 'Mode Siaga Dinonaktifkan.'),
                   ],
                 ),
                 backgroundColor: _isSiagaMode ? Colors.green.shade600 : Colors.orange.shade600,
-                duration: Duration(seconds: 3),
+                duration: const Duration(seconds: 3),
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
@@ -227,8 +203,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Logout'),
-          content: Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
+          title: const Text('Logout'),
+          content: const Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -276,7 +252,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       // Handle "Butuh Darah" action
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Fitur Butuh Darah akan segera hadir!'),
+          content: const Text('Fitur Butuh Darah akan segera hadir!'),
           backgroundColor: Colors.red.shade400,
         ),
       );
@@ -291,17 +267,17 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     switch (index) {
       case 1:
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Halaman Donor akan segera hadir!')),
+          const SnackBar(content: Text('Halaman Donor akan segera hadir!')),
         );
         break;
       case 3:
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Halaman Riwayat akan segera hadir!')),
+          const SnackBar(content: Text('Halaman Riwayat akan segera hadir!')),
         );
         break;
       case 4:
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Halaman Profil akan segera hadir!')),
+          const SnackBar(content: Text('Halaman Profil akan segera hadir!')),
         );
         break;
     }
@@ -310,8 +286,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   // NEW: Widget for the combined Siaga Mode banner
   Widget _buildSiagaBanner() {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 20),
-      padding: EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.orange.shade300, Colors.orange.shade400],
@@ -324,7 +300,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           BoxShadow(
             color: Colors.orange.shade400.withOpacity(0.3),
             blurRadius: 8,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -335,7 +311,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Siaga Donor, Siap Bantu Kapan Saja!',
                   style: TextStyle(
                     color: Colors.white,
@@ -353,7 +329,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               ],
             ),
           ),
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
           // Sized box to constrain the height of the switch visually
           SizedBox(
             height: 30, // Adjust as needed to align with text
@@ -370,7 +346,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       ),
     );
   }
-
 
   Widget _buildMainContent() {
     if (_isLoading) {
@@ -392,13 +367,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.only(
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(24),
                 bottomRight: Radius.circular(24),
               ),
             ),
             child: Padding(
-              padding: EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
                   // Top bar with greeting and logout
@@ -409,7 +384,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
+                            const Row(
                               children: [
                                 Icon(Icons.favorite,
                                     color: Colors.white, size: 24),
@@ -424,10 +399,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                 ),
                               ],
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
                             Text(
                               'Halo, $_userName!',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -439,7 +414,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       IconButton(
                         onPressed: _isLoggingOut ? null : _handleLogout,
                         icon: _isLoggingOut
-                            ? SizedBox(
+                            ? const SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
@@ -448,13 +423,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                       Colors.white),
                                 ),
                               )
-                            : Icon(Icons.logout, color: Colors.white, size: 24),
+                            : const Icon(Icons.logout, color: Colors.white, size: 24),
                         tooltip: 'Logout',
                       ),
                     ],
                   ),
 
-                  SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
                   // Info Cards Row
                   Row(
@@ -462,7 +437,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       // Blood Type Card
                       Expanded(
                         child: Container(
-                          padding: EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
@@ -470,7 +445,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.1),
                                 blurRadius: 8,
-                                offset: Offset(0, 2),
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
@@ -484,7 +459,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                   color: Colors.grey.shade600,
                                 ),
                               ),
-                              SizedBox(height: 8),
+                              const SizedBox(height: 8),
                               Row(
                                 children: [
                                   Text(
@@ -495,9 +470,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                       color: Colors.red.shade400,
                                     ),
                                   ),
-                                  SizedBox(width: 8),
+                                  const SizedBox(width: 8),
                                   Container(
-                                    padding: EdgeInsets.all(8),
+                                    padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                       color: Colors.red.shade50,
                                       borderRadius: BorderRadius.circular(8),
@@ -515,12 +490,12 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         ),
                       ),
 
-                      SizedBox(width: 16),
+                      const SizedBox(width: 16),
 
                       // Donation Count Card
                       Expanded(
                         child: Container(
-                          padding: EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
@@ -528,7 +503,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.1),
                                 blurRadius: 8,
-                                offset: Offset(0, 2),
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
@@ -542,7 +517,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                   color: Colors.grey.shade600,
                                 ),
                               ),
-                              SizedBox(height: 8),
+                              const SizedBox(height: 8),
                               Row(
                                 children: [
                                   Text(
@@ -553,9 +528,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                       color: Colors.blue.shade600,
                                     ),
                                   ),
-                                  SizedBox(width: 8),
+                                  const SizedBox(width: 8),
                                   Container(
-                                    padding: EdgeInsets.all(8),
+                                    padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                       color: Colors.blue.shade50,
                                       borderRadius: BorderRadius.circular(8),
@@ -579,19 +554,19 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             ),
           ),
           
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           _buildSiagaBanner(),
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           Container(
-            margin: EdgeInsets.symmetric(horizontal: 20),
+            margin: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Icon(Icons.bloodtype, color: Colors.red.shade400, size: 20),
-                    SizedBox(width: 8),
-                    Text(
+                    const SizedBox(width: 8),
+                    const Text(
                       'Stok Darah PMI Makassar',
                       style: TextStyle(
                         fontSize: 16,
@@ -601,7 +576,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     ),
                   ],
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   'Terakhir diperbarui: ${_getFormattedDate()}',
                   style: TextStyle(
@@ -609,17 +584,17 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     color: Colors.grey.shade600,
                   ),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 _buildBloodStockChart(),
               ],
             ),
           ),
 
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
 
           // Events Section
           Container(
-            margin: EdgeInsets.symmetric(horizontal: 20),
+            margin: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               children: [
                 Row(
@@ -629,8 +604,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       children: [
                         Icon(Icons.event,
                             color: Colors.blue.shade600, size: 20),
-                        SizedBox(width: 8),
-                        Text(
+                        const SizedBox(width: 8),
+                        const Text(
                           'Event Terdekat',
                           style: TextStyle(
                             fontSize: 16,
@@ -643,7 +618,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     TextButton(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
+                          const SnackBar(
                               content: Text(
                                   'Melihat semua event akan segera hadir!')),
                         );
@@ -659,7 +634,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     ),
                   ],
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -670,14 +645,14 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         'Beranda',
                         Colors.red.shade400,
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       _buildEventCard(
                         'Donor Darah Gratis',
                         '18 Jun 2025, 08:00 - selesai',
                         'Butuh',
                         Colors.green.shade400,
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       _buildEventCard(
                         'Awal Donor Darah',
                         '20 Jun 2025, 08:00 - selesai',
@@ -692,7 +667,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           ),
 
           // Bottom padding for navbar
-          SizedBox(height: 100),
+          const SizedBox(height: 100),
         ],
       ),
     );
@@ -715,21 +690,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       'Desember'
     ];
     return '${now.day} ${months[now.month - 1]} ${now.year}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      body: SafeArea(
-        child:
-            _currentIndex == 0 ? _buildMainContent() : _buildPlaceholderPage(),
-      ),
-      bottomNavigationBar: CustomBottomNavbar(
-        currentIndex: _currentIndex,
-        onTap: _onNavbarTap,
-      ),
-    );
   }
 
   Widget _buildPlaceholderPage() {
@@ -757,7 +717,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             size: 80,
             color: Colors.grey.shade400,
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           Text(
             pageTitle,
             style: TextStyle(
@@ -766,7 +726,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               color: Colors.grey.shade700,
             ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Text(
             'Fitur ini akan segera hadir!',
             style: TextStyle(
@@ -788,7 +748,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     ];
 
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -796,7 +756,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -810,13 +770,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   width: 30, // Adjust width as needed for type label
                   child: Text(
                     blood['type'] as String,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
                   ),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(
                   child: LinearProgressIndicator(
                     value: (blood['percentage'] as int) / 100,
@@ -826,7 +786,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(5),
                   ),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Text(
                   '${blood['percentage']}%',
                   style: TextStyle(
@@ -846,7 +806,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   Widget _buildEventCard(String title, String date, String tag, Color tagColor) {
     return Container(
       width: 250, // Fixed width for event cards
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -854,7 +814,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -864,7 +824,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           Row(
             children: [
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: tagColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(4),
@@ -880,15 +840,15 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               ),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             title,
-            style: TextStyle(
+            style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
             ),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
             date,
             style: TextStyle(
@@ -897,6 +857,21 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      body: SafeArea(
+        child:
+            _currentIndex == 0 ? _buildMainContent() : _buildPlaceholderPage(),
+      ),
+      bottomNavigationBar: CustomBottomNavbar(
+        currentIndex: _currentIndex,
+        onTap: _onNavbarTap,
       ),
     );
   }
