@@ -8,7 +8,7 @@ class MainScreen extends StatefulWidget {
   _MainScreenState createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   final AuthService _authService = AuthService();
   bool _isLoggingOut = false;
   int _currentIndex = 0;
@@ -19,10 +19,46 @@ class _MainScreenState extends State<MainScreen> {
   int _donationCount = 0;
   bool _isLoading = true;
 
+  // Mode Siaga variables
+  bool _isSiagaMode = false;
+  bool _isTogglingMode = false;
+
+  // Removed AnimationController and Animation for the pulsing effect,
+  // as the new design does not require it.
+  // late AnimationController _pulseController;
+  // late Animation<double> _pulseAnimation;
+
+
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    // Removed _initializeAnimations() call as pulsing effect is removed
+  }
+
+  // Removed _initializeAnimations() method as pulsing effect is removed
+  // void _initializeAnimations() {
+  //   _pulseController = AnimationController(
+  //     duration: Duration(seconds: 2),
+  //     vsync: this,
+  //   );
+  //   _pulseAnimation = Tween<double>(
+  //     begin: 1.0,
+  //     end: 1.2,
+  //   ).animate(CurvedAnimation(
+  //     parent: _pulseController,
+  //     curve: Curves.easeInOut,
+  //   ));
+
+  //   _pulseController.repeat(reverse: true);
+  // }
+
+  @override
+  void dispose() {
+    // Dispose the controller only if it was initialized.
+    // If you decide to bring back animations later, uncomment this line.
+    // _pulseController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -36,6 +72,7 @@ class _MainScreenState extends State<MainScreen> {
                 userData?['name'] ?? user.displayName ?? 'Pengguna SiagaDarah';
             _userBloodType = userData?['bloodType'] ?? '-';
             _donationCount = userData?['stats']?['donationsCompleted'] ?? 0;
+            _isSiagaMode = userData?['siagaMode'] ?? false;
             _isLoading = false;
           });
         }
@@ -51,6 +88,137 @@ class _MainScreenState extends State<MainScreen> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _toggleSiagaMode() async {
+    if (_isTogglingMode) return;
+
+    // Show confirmation dialog
+    bool? shouldToggle = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                _isSiagaMode ? Icons.notification_important : Icons.notifications_active,
+                color: _isSiagaMode ? Colors.orange : Colors.red.shade400,
+              ),
+              SizedBox(width: 8),
+              Text(_isSiagaMode ? 'Nonaktifkan Mode Siaga?' : 'Aktifkan Mode Siaga?'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_isSiagaMode
+                  ? 'Anda tidak akan menerima notifikasi darurat kebutuhan donor darah.'
+                  : 'Anda akan menerima notifikasi darurat saat ada kebutuhan donor darah sesuai golongan darah Anda.'),
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: (_isSiagaMode ? Colors.orange : Colors.red.shade400).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: _isSiagaMode ? Colors.orange.shade700 : Colors.red.shade600,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _isSiagaMode
+                            ? 'Mode siaga akan dinonaktifkan'
+                            : 'Pastikan notifikasi aplikasi sudah diaktifkan',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _isSiagaMode ? Colors.orange.shade700 : Colors.red.shade600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('Batal', style: TextStyle(color: Colors.grey.shade600)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isSiagaMode ? Colors.orange : Colors.red.shade400,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(_isSiagaMode ? 'Nonaktifkan' : 'Aktifkan'),
+            ),
+          ],
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        );
+      },
+    );
+
+    if (shouldToggle == true) {
+      setState(() => _isTogglingMode = true);
+
+      try {
+        final user = _authService.currentUser;
+        if (user != null) {
+          // Update mode siaga di database
+          await _authService.updateUserSiagaMode(user.uid, !_isSiagaMode);
+
+          if (mounted) {
+            setState(() {
+              _isSiagaMode = !_isSiagaMode;
+              _isTogglingMode = false;
+            });
+
+            // Show success message
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    Icon(
+                      _isSiagaMode ? Icons.check_circle : Icons.cancel,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    SizedBox(width: 8),
+                    Text(_isSiagaMode
+                        ? 'Mode Siaga Diaktifkan! Anda akan mendapat notifikasi darurat.'
+                        : 'Mode Siaga Dinonaktifkan.'),
+                  ],
+                ),
+                backgroundColor: _isSiagaMode ? Colors.green.shade600 : Colors.orange.shade600,
+                duration: Duration(seconds: 3),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isTogglingMode = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal mengubah mode siaga: ${e.toString()}'),
+              backgroundColor: Colors.red.shade600,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -138,6 +306,71 @@ class _MainScreenState extends State<MainScreen> {
         break;
     }
   }
+
+  // NEW: Widget for the combined Siaga Mode banner
+  Widget _buildSiagaBanner() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 20),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.orange.shade300, Colors.orange.shade400],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        // Added shadow for consistency with other cards/banners
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orange.shade400.withOpacity(0.3),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Siaga Donor, Siap Bantu Kapan Saja!',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  'Hidupkan Mode Siaga & Jadi Penolong Sesama',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 16),
+          // Sized box to constrain the height of the switch visually
+          SizedBox(
+            height: 30, // Adjust as needed to align with text
+            child: Switch(
+              value: _isSiagaMode,
+              onChanged: _isTogglingMode ? null : (value) => _toggleSiagaMode(),
+              activeColor: Colors.white,
+              activeTrackColor: Colors.white.withOpacity(0.7),
+              inactiveThumbColor: Colors.grey.shade400, // Make it look off
+              inactiveTrackColor: Colors.grey.shade600, // Make it look off
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Widget _buildMainContent() {
     if (_isLoading) {
@@ -345,55 +578,10 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ),
           ),
-
+          
           SizedBox(height: 24),
-
-          // Emergency Alert Banner
-          Container(
-            margin: EdgeInsets.symmetric(horizontal: 20),
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.orange.shade300, Colors.orange.shade400],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.warning_amber_rounded,
-                    color: Colors.white, size: 24),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Siaga Donor, Siap Bantu Kapan Saja!',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Hidupkan Mode Siaga & Jadi Pendonor Sesama',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
+          _buildSiagaBanner(),
           SizedBox(height: 24),
-
-          // Blood Stock Section
           Container(
             margin: EdgeInsets.symmetric(horizontal: 20),
             child: Column(
@@ -615,11 +803,11 @@ class _MainScreenState extends State<MainScreen> {
       child: Column(
         children: bloodTypes.map((blood) {
           return Padding(
-            padding: EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
             child: Row(
               children: [
                 SizedBox(
-                  width: 24,
+                  width: 30, // Adjust width as needed for type label
                   child: Text(
                     blood['type'] as String,
                     style: TextStyle(
@@ -628,36 +816,22 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                   ),
                 ),
-                SizedBox(width: 16),
+                SizedBox(width: 12),
                 Expanded(
-                  child: Container(
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: (blood['percentage'] as int) / 100,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: blood['color'] as Color,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
+                  child: LinearProgressIndicator(
+                    value: (blood['percentage'] as int) / 100,
+                    backgroundColor: Colors.grey.shade200,
+                    valueColor: AlwaysStoppedAnimation<Color>(blood['color'] as Color),
+                    minHeight: 10,
+                    borderRadius: BorderRadius.circular(5),
                   ),
                 ),
                 SizedBox(width: 12),
-                SizedBox(
-                  width: 32,
-                  child: Text(
-                    '${blood['percentage']}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
-                    textAlign: TextAlign.right,
+                Text(
+                  '${blood['percentage']}%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade700,
                   ),
                 ),
               ],
@@ -668,10 +842,10 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildEventCard(
-      String title, String date, String tag, Color tagColor) {
+  // Corrected _buildEventCard method
+  Widget _buildEventCard(String title, String date, String tag, Color tagColor) {
     return Container(
-      width: 280,
+      width: 250, // Fixed width for event cards
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,

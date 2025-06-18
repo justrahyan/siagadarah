@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:math' as math;
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -52,6 +53,21 @@ class AuthService {
           'signInMethod': 'email',
           'isProfileComplete':
               false, // Akan jadi true setelah user melengkapi data
+
+          // ===== MODE SIAGA SETTINGS =====
+          'siagaMode': false, // Default Mode Siaga nonaktif
+          'siagaSettings': {
+            'enabled': false,
+            'activatedAt': null,
+            'lastNotificationAt': null,
+            'radiusKm': 10.0, // Default radius 10 km
+            'bloodTypesEnabled': [], // Will be set based on user's blood type
+            'emergencyOnly': true, // Default hanya emergency
+            'soundNotification': true,
+            'vibrationNotification': true,
+            'notificationCount': 0,
+            'responsesCount': 0,
+          },
 
           // ===== TEMPORARY FIELDS (Data yang belum diisi, akan diisi nanti) =====
           // Personal Details
@@ -204,6 +220,21 @@ class AuthService {
             'isProfileComplete': false,
             'needsPhoneNumber': true, // Flag untuk meminta phone number
 
+            // ===== MODE SIAGA SETTINGS =====
+            'siagaMode': false, // Default Mode Siaga nonaktif
+            'siagaSettings': {
+              'enabled': false,
+              'activatedAt': null,
+              'lastNotificationAt': null,
+              'radiusKm': 10.0,
+              'bloodTypesEnabled': [],
+              'emergencyOnly': true,
+              'soundNotification': true,
+              'vibrationNotification': true,
+              'notificationCount': 0,
+              'responsesCount': 0,
+            },
+
             // ===== TEMPORARY FIELDS (sama seperti email registration) =====
             'dateOfBirth': '',
             'gender': '',
@@ -297,6 +328,219 @@ class AuthService {
           success: false, message: 'Google sign in failed: ${e.toString()}');
     }
   }
+
+  // ===== MODE SIAGA METHODS =====
+
+  // Toggle Mode Siaga on/off
+  Future<AuthResult> updateUserSiagaMode(String uid, bool siagaMode) async {
+    try {
+      print('🔧 AuthService: Updating siaga mode for $uid to $siagaMode');
+
+      Map<String, dynamic> updateData = {
+        'siagaMode': siagaMode,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      // If activating siaga mode
+      if (siagaMode) {
+        updateData['siagaSettings.enabled'] = true;
+        updateData['siagaSettings.activatedAt'] = FieldValue.serverTimestamp();
+        
+        // Get user's blood type to set default enabled blood types
+        DocumentSnapshot userDoc = await _firestore.collection('users').doc(uid).get();
+        if (userDoc.exists) {
+          Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+          String userBloodType = userData['bloodType'] ?? '';
+          
+          if (userBloodType.isNotEmpty) {
+            // Set compatible blood types based on user's blood type
+            List<String> compatibleTypes = _getCompatibleBloodTypes(userBloodType);
+            updateData['siagaSettings.bloodTypesEnabled'] = compatibleTypes;
+          }
+        }
+      } else {
+        // If deactivating siaga mode
+        updateData['siagaSettings.enabled'] = false;
+        updateData['siagaSettings.activatedAt'] = null;
+      }
+
+      await _firestore.collection('users').doc(uid).update(updateData);
+      
+      print('✅ AuthService: Siaga mode updated successfully');
+      return AuthResult(
+        success: true, 
+        message: siagaMode ? 'Mode Siaga diaktifkan' : 'Mode Siaga dinonaktifkan'
+      );
+    } catch (e) {
+      print('💥 AuthService: Error updating siaga mode: $e');
+      return AuthResult(
+        success: false, 
+        message: 'Gagal mengubah mode siaga: ${e.toString()}'
+      );
+    }
+  }
+
+  // Update siaga settings (radius, blood types, etc.)
+  Future<AuthResult> updateSiagaSettings({
+    required String uid,
+    double? radiusKm,
+    List<String>? bloodTypesEnabled,
+    bool? emergencyOnly,
+    bool? soundNotification,
+    bool? vibrationNotification,
+  }) async {
+    try {
+      Map<String, dynamic> updateData = {
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      if (radiusKm != null) {
+        updateData['siagaSettings.radiusKm'] = radiusKm;
+      }
+      if (bloodTypesEnabled != null) {
+        updateData['siagaSettings.bloodTypesEnabled'] = bloodTypesEnabled;
+      }
+      if (emergencyOnly != null) {
+        updateData['siagaSettings.emergencyOnly'] = emergencyOnly;
+      }
+      if (soundNotification != null) {
+        updateData['siagaSettings.soundNotification'] = soundNotification;
+      }
+      if (vibrationNotification != null) {
+        updateData['siagaSettings.vibrationNotification'] = vibrationNotification;
+      }
+
+      await _firestore.collection('users').doc(uid).update(updateData);
+      
+      return AuthResult(success: true, message: 'Pengaturan siaga berhasil diperbarui');
+    } catch (e) {
+      print('Error updating siaga settings: $e');
+      return AuthResult(
+        success: false, 
+        message: 'Gagal memperbarui pengaturan siaga: ${e.toString()}'
+      );
+    }
+  }
+
+  // Get users with active siaga mode for emergency notifications
+  Future<List<Map<String, dynamic>>> getActiveSiagaUsers({
+    String? bloodType,
+    double? latitude,
+    double? longitude,
+    double? radiusKm,
+  }) async {
+    try {
+      Query query = _firestore.collection('users')
+          .where('siagaMode', isEqualTo: true)
+          .where('siagaSettings.enabled', isEqualTo: true);
+
+      if (bloodType != null) {
+        query = query.where('siagaSettings.bloodTypesEnabled', arrayContains: bloodType);
+      }
+
+      QuerySnapshot snapshot = await query.get();
+      
+      List<Map<String, dynamic>> siagaUsers = [];
+      
+      for (QueryDocumentSnapshot doc in snapshot.docs) {
+        Map<String, dynamic> userData = doc.data() as Map<String, dynamic>;
+        
+        // If location filtering is needed
+        if (latitude != null && longitude != null && radiusKm != null) {
+          Map<String, dynamic> userAddress = userData['address'] ?? {};
+          Map<String, dynamic> userCoords = userAddress['coordinates'] ?? {};
+          
+          double userLat = userCoords['latitude']?.toDouble() ?? 0.0;
+          double userLng = userCoords['longitude']?.toDouble() ?? 0.0;
+          
+          if (userLat != 0.0 && userLng != 0.0) {
+            double distance = _calculateDistance(latitude, longitude, userLat, userLng);
+            if (distance <= radiusKm) {
+              userData['distance'] = distance;
+              siagaUsers.add(userData);
+            }
+          }
+        } else {
+          siagaUsers.add(userData);
+        }
+      }
+      
+      // Sort by distance if location was provided
+      if (latitude != null && longitude != null) {
+        siagaUsers.sort((a, b) => (a['distance'] ?? 0.0).compareTo(b['distance'] ?? 0.0));
+      }
+      
+      return siagaUsers;
+    } catch (e) {
+      print('Error getting active siaga users: $e');
+      return [];
+    }
+  }
+
+  // Calculate distance between two coordinates (Haversine formula)
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const double radiusEarth = 6371; // Earth's radius in kilometers
+    
+    double dLat = _degreesToRadians(lat2 - lat1);
+    double dLon = _degreesToRadians(lon2 - lon1);
+    
+    double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_degreesToRadians(lat1)) *
+        math.cos(_degreesToRadians(lat2)) *
+        math.sin(dLon / 2) *
+        math.sin(dLon / 2);
+    
+    double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return radiusEarth * c;
+  }
+
+  double _degreesToRadians(double degrees) {
+    return degrees * (math.pi / 180);
+  }
+
+  // Get compatible blood types based on user's blood type
+  List<String> _getCompatibleBloodTypes(String userBloodType) {
+    Map<String, List<String>> compatibility = {
+      'A+': ['A+', 'A-', 'O+', 'O-'],
+      'A-': ['A-', 'O-'],
+      'B+': ['B+', 'B-', 'O+', 'O-'],
+      'B-': ['B-', 'O-'],
+      'AB+': ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], // Universal recipient
+      'AB-': ['A-', 'B-', 'AB-', 'O-'],
+      'O+': ['O+', 'O-'],
+      'O-': ['O-'], // Universal donor, but can only receive O-
+    };
+    
+    return compatibility[userBloodType] ?? [userBloodType];
+  }
+
+  // Record siaga notification sent
+  Future<void> recordSiagaNotification(String uid) async {
+    try {
+      await _firestore.collection('users').doc(uid).update({
+        'siagaSettings.lastNotificationAt': FieldValue.serverTimestamp(),
+        'siagaSettings.notificationCount': FieldValue.increment(1),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error recording siaga notification: $e');
+    }
+  }
+
+  // Record siaga response
+  Future<void> recordSiagaResponse(String uid) async {
+    try {
+      await _firestore.collection('users').doc(uid).update({
+        'siagaSettings.responsesCount': FieldValue.increment(1),
+        'stats.requestsFulfilled': FieldValue.increment(1),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error recording siaga response: $e');
+    }
+  }
+
+  // ===== END MODE SIAGA METHODS =====
 
   // Update phone number untuk Google users
   Future<AuthResult> updatePhoneNumber({
