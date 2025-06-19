@@ -1,5 +1,8 @@
 import 'package:another_flushbar/flushbar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'LoginScreen.dart';
 import 'main_screen.dart';
 import '../service/auth_service.dart';
@@ -109,7 +112,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           await _authService.sendEmailVerification();
 
           print('✅ Registration successful');
-          // _showSnackBar('Registrasi berhasil!', isError: false);
+          // _showSnackBar('Akun berhasil terdaftar! Silakan verifikasi akun melalui link yang dikirim ke email Anda (cek folder spam jika tidak menemukan emailnya).', isError: false);
 
           // Small delay to ensure UI updates properly
           await Future.delayed(Duration(milliseconds: 300));
@@ -131,7 +134,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
           if (currentUser != null) {
             print('🎯 User is actually registered! Proceeding...');
-            _showSnackBar('Registrasi berhasil!', isError: false);
+            _showSnackBar(
+                'Akun berhasil terdaftar! Silakan verifikasi akun melalui link yang dikirim ke email Anda (cek folder spam jika tidak menemukan emailnya).',
+                isError: false);
 
             await Future.delayed(const Duration(milliseconds: 500));
 
@@ -153,7 +158,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         final currentUser = _authService.currentUser;
         if (currentUser != null) {
           print('🎯 User registered despite exception! Proceeding...');
-          _showSnackBar('Registrasi berhasil!', isError: false);
+          _showSnackBar(
+              'Akun berhasil terdaftar! Silakan verifikasi akun melalui link yang dikirim ke email Anda (cek folder spam jika tidak menemukan emailnya).',
+              isError: false);
 
           await Future.delayed(const Duration(milliseconds: 500));
 
@@ -180,84 +187,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      print('🔍 Starting Google registration process...');
       final result = await _authService.signInWithGoogle(isRegister: true);
-
-      print('📊 Google registration result: ${result.success}');
+      print('📊 Google Registration result: ${result.success}');
       print('💬 Message: ${result.message}');
       print('👤 User: ${result.user?.email}');
 
-      if (mounted) {
-        if (result.success && result.user != null) {
-          print('✅ Google registration successful');
-
-          // Small delay to ensure UI updates properly
-          await Future.delayed(const Duration(milliseconds: 500));
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-                builder: (context) => MainScreen(
-                      showSuccessMessage: true,
-                      successMessage: 'Registrasi berhasil!',
-                    )),
-          );
-        } else {
-          print('❌ Google registration failed: ${result.message}');
-
-          // Check if user is actually signed in despite the error
-          final currentUser = _authService.currentUser;
-          print(
-              '🔄 Checking current user after Google registration: ${currentUser?.email}');
-
-          if (currentUser != null) {
-            print('🎯 User is actually registered with Google! Proceeding...');
-
-            await Future.delayed(const Duration(milliseconds: 500));
-
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => MainScreen(
-                        showSuccessMessage: true,
-                        successMessage: 'Registrasi berhasil!',
-                      )),
-            );
-          } else {
-            _showSnackBar(result.message ?? 'Google registrasi gagal',
-                isError: true);
-          }
-        }
+      if (result.success && result.user != null) {
+        _showSnackBar(
+            "Akun berhasil terdaftar! Silakan verifikasi akun melalui link yang dikirim ke email Anda (cek folder spam jika tidak menemukan emailnya).",
+            isError: false);
+        await Future.delayed(const Duration(milliseconds: 500));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (_) => MainScreen(
+                    showSuccessMessage: true,
+                    successMessage:
+                        'Akun berhasil terdaftar! Silakan verifikasi akun melalui link yang dikirim ke email Anda (cek folder spam jika tidak menemukan emailnya).',
+                  )),
+        );
+      } else {
+        _showSnackBar(result.message ?? 'Registrasi gagal', isError: true);
       }
     } catch (e) {
-      print('💥 Exception during Google registration: $e');
-      print('🔍 Exception type: ${e.runtimeType}');
-
-      if (mounted) {
-        // Check if user is signed in despite the exception
-        final currentUser = _authService.currentUser;
-        if (currentUser != null) {
-          print(
-              '🎯 User registered with Google despite exception! Proceeding...');
-          await Future.delayed(const Duration(milliseconds: 500));
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-                builder: (context) => MainScreen(
-                      showSuccessMessage: true,
-                      successMessage: 'Registrasi berhasil!',
-                    )),
-          );
-        } else {
-          _showSnackBar('Terjadi kesalahan: ${e.toString()}', isError: true);
-        }
-      }
+      print('❌ Google Register Error: $e');
+      _showSnackBar("Terjadi kesalahan: ${e.toString()}", isError: true);
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }

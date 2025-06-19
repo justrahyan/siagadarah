@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Get current user
@@ -156,10 +156,9 @@ class AuthService {
   Future<AuthResult> signInWithGoogle({bool isRegister = false}) async {
     try {
       print('🔍 AuthService: Starting Google Sign-In');
-      // Delete login cache
-      await GoogleSignIn().signOut();
-      // Trigger the authentication flow
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      await _googleSignIn.signOut(); // clear cache
+
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       print("🔥 googleUser: ${googleUser?.email}");
 
       if (googleUser == null) {
@@ -167,49 +166,67 @@ class AuthService {
             success: false, message: 'Login dengan Google dibatalkan');
       }
 
-      // Obtain the auth details from the request
+      // Debug: Print semua informasi email yang tersedia
+      print("🔍 Debug Info:");
+      print("  - googleUser.email: ${googleUser.email}");
+      print("  - googleUser.email == null: ${googleUser.email == null}");
+      if (googleUser.email != null) {
+        print("  - googleUser.email.isEmpty: ${googleUser.email!.isEmpty}");
+      }
+
+      // Validasi email dari GoogleSignInAccount - lebih defensif
+      final googleEmail = googleUser.email;
+      if (googleEmail == null || googleEmail.trim().isEmpty) {
+        print("❌ Google email validation failed");
+        return AuthResult(
+            success: false, message: 'Email tidak tersedia dari akun Google');
+      }
+
+      print("✅ Google email validation passed: $googleEmail");
+
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
-      // Create a new credential
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // 🔍 Cek apakah email Google sudah terdaftar
-      final methods = await _auth.fetchSignInMethodsForEmail(googleUser.email);
-      print('📡 Sign-in methods for ${googleUser.email}: $methods');
-
-      if (!isRegister && methods.contains('password')) {
-        // 💡 Sudah terdaftar pakai email/password
-        return AuthResult(
-          success: false,
-          message: 'email_exists_with_password',
-          user: null,
-        );
-      }
-
-      // Once signed in, return the UserCredential
-      UserCredential result = await _auth.signInWithCredential(credential);
-      User? user = result.user;
+      final result = await _auth.signInWithCredential(credential);
+      final user = result.user;
 
       if (user != null) {
-        // Check if user exists in Firestore
-        DocumentSnapshot userDoc =
+        print("🔍 User Info:");
+        print("  - user.email: ${user.email}");
+        print("  - user.uid: ${user.uid}");
+
+        // Gunakan email dari googleUser jika user.email null
+        final userEmail = user.email ?? googleUser.email ?? '';
+
+        print("📧 Final email yang akan digunakan: '$userEmail'");
+
+        // Validasi email tidak kosong
+        if (userEmail.trim().isEmpty) {
+          print("❌ Final email validation failed");
+          return AuthResult(
+              success: false,
+              message: 'Email tidak tersedia dari autentikasi Google');
+        }
+
+        print('📧 Email yang akan disimpan: $userEmail');
+
+        final userDoc =
             await _firestore.collection('users').doc(user.uid).get();
 
         if (!userDoc.exists) {
           print('📝 AuthService: Creating new Google user document');
 
-          // Create user data for Google sign-in (phone number will be requested later)
           Map<String, dynamic> userData = {
-            // ===== FILLED FIELDS (dari Google) =====
             'uid': user.uid,
-            'name': user.displayName ?? '',
-            'email': user.email ?? '',
-            'phone': '', // KOSONG - akan diminta saat first login
-            'profilePicture': user.photoURL ?? '',
+            'name': user.displayName ?? googleUser.displayName ?? '',
+            'email': userEmail, // Pastikan email tidak kosong
+            'phone': '',
+            'profilePicture': user.photoURL ?? googleUser.photoUrl ?? '',
             'createdAt': FieldValue.serverTimestamp(),
             'lastLogin': FieldValue.serverTimestamp(),
             'updatedAt': FieldValue.serverTimestamp(),
@@ -218,100 +235,91 @@ class AuthService {
             'signInMethod': 'google',
             'isProfileComplete': false,
             'needsPhoneNumber': false,
-            'role': 'user', // DEFAULT ROLE: user
-            // ===== TEMPORARY FIELDS (sama seperti email registration) =====
-            'dateOfBirth': '',
-            'gender': '',
-            'weight': 0,
-            'height': 0,
-            'occupation': '',
-            'bloodType': '',
-
-            'address': {
-              'street': '',
-              'city': '',
-              'district': '',
-              'province': '',
-              'postalCode': '',
-              'coordinates': {
-                'latitude': 0.0,
-                'longitude': 0.0,
-              }
-            },
-
-            'isDonor': false,
-            'donorStatus': 'inactive',
-            'lastDonationDate': null,
-            'totalDonations': 0,
-            'eligibleToDonate': false,
-            'nextEligibleDate': null,
-
-            'medicalInfo': {
-              'allergies': [],
-              'medications': [],
-              'medicalConditions': [],
-              'lastCheckup': null,
-              'emergencyContact': {
-                'name': '',
-                'phone': '',
-                'relationship': '',
-              }
-            },
-
-            'settings': {
-              'notifications': {
-                'bloodRequest': true,
-                'donationReminder': true,
-                'healthTips': true,
-                'emergency': true,
-              },
-              'privacy': {
-                'showLocation': true,
-                'showPhone': false,
-                'showEmail': false,
-                'showFullName': true,
-              },
-              'theme': 'light',
-              'language': 'id',
-            },
-
-            'stats': {
-              'requestsMade': 0,
-              'requestsFulfilled': 0,
-              'donationsCompleted': 0,
-              'livesImpacted': 0,
-              'pointsEarned': 0,
-            },
-
-            'badges': [],
-            'achievements': [],
-            'bloodRequestsHistory': [],
-            'donationHistory': [],
-            'loginHistory': [],
+            'role': 'user',
           };
 
           await _firestore.collection('users').doc(user.uid).set(userData);
-          if (!user.emailVerified) {
-            await user.sendEmailVerification();
+
+          // Hanya kirim email verification jika user.email tidak null
+          if (!user.emailVerified &&
+              user.email != null &&
+              user.email!.isNotEmpty) {
+            try {
+              await user.sendEmailVerification();
+              print('✅ Email verification sent to: ${user.email}');
+            } catch (e) {
+              print('⚠️ Failed to send email verification: $e');
+              // Tidak return error, karena user sudah berhasil dibuat
+            }
+          } else {
+            print(
+                '⚠️ Skipping email verification - user.email is null or user already verified');
           }
         } else {
-          print('🔄 AuthService: Updating existing Google user login');
-          // Update last login time
-          await _firestore.collection('users').doc(user.uid).update({
+          // Update email jika kosong di dokumen yang sudah ada
+          final existingData = userDoc.data() as Map<String, dynamic>;
+          Map<String, dynamic> updateData = {
             'lastLogin': FieldValue.serverTimestamp(),
             'updatedAt': FieldValue.serverTimestamp(),
-          });
+          };
+
+          // Jika email kosong di Firestore, update dengan email yang benar
+          if (existingData['email'] == null || existingData['email'] == '') {
+            updateData['email'] = userEmail;
+            print('📧 Updating empty email in Firestore with: $userEmail');
+          }
+
+          await _firestore.collection('users').doc(user.uid).update(updateData);
         }
 
-        return AuthResult(
-            success: true, user: user, needsPhoneNumber: !userDoc.exists);
+        return AuthResult(success: true, user: user);
       } else {
         return AuthResult(success: false, message: 'Gagal login dengan Google');
       }
     } catch (e) {
       print('💥 AuthService: Google Sign-In exception: $e');
+
+      // Handle specific Firebase Auth errors
+      if (e.toString().contains('missing-email')) {
+        return AuthResult(
+          success: false,
+          message: 'Email tidak tersedia dari akun Google. Silakan coba lagi.',
+        );
+      }
+
       return AuthResult(
-          success: false, message: 'Google sign in failed: ${e.toString()}');
+        success: false,
+        message: 'Google sign in failed: ${e.toString()}',
+      );
+    }
+  }
+
+  // Method tambahan untuk memperbaiki email yang kosong
+  Future<bool> fixEmptyEmailForCurrentUser() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
+
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (!userDoc.exists) return false;
+
+      final data = userDoc.data() as Map<String, dynamic>;
+
+      // Jika email kosong di Firestore tapi ada di Firebase Auth
+      if ((data['email'] == null || data['email'] == '') &&
+          user.email != null) {
+        await _firestore.collection('users').doc(user.uid).update({
+          'email': user.email!,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        print('📧 Fixed empty email for user: ${user.email}');
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      print('💥 Error fixing empty email: $e');
+      return false;
     }
   }
 

@@ -37,7 +37,10 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     if (widget.showSuccessMessage) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showSnackBar('Akun berhasil terdaftar!', isError: false);
+        _showSnackBar(
+          'Akun berhasil terdaftar! Silakan verifikasi akun melalui link yang dikirim ke email Anda (cek folder spam jika tidak menemukan emailnya).',
+          isError: false,
+        );
       });
     }
   }
@@ -151,115 +154,26 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      print('🔍 Starting Google Sign-In process...');
       final result = await _authService.signInWithGoogle(isRegister: false);
-
       print('📊 Google Sign-In result: ${result.success}');
       print('💬 Message: ${result.message}');
       print('👤 User: ${result.user?.email}');
 
-      if (result.message == 'email_exists_with_password') {
-        final connect = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text("Email sudah digunakan"),
-            content: Text(
-                "Email ini sudah digunakan untuk login dengan email & password. Ingin tautkan dengan akun Google?"),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text("Batal"),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text("Tautkan"),
-              ),
-            ],
-          ),
+      if (result.success && result.user != null) {
+        _showSnackBar('Login berhasil!', isError: false);
+        await Future.delayed(const Duration(milliseconds: 500));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => MainScreen()),
         );
-
-        if (connect == true) {
-          final googleUser = await GoogleSignIn().signIn();
-          final googleAuth = await googleUser?.authentication;
-          final googleCredential = GoogleAuthProvider.credential(
-            accessToken: googleAuth?.accessToken,
-            idToken: googleAuth?.idToken,
-          );
-
-          final currentUser = FirebaseAuth.instance.currentUser;
-          if (currentUser != null) {
-            await currentUser.linkWithCredential(googleCredential);
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(currentUser.uid)
-                .update({
-              'signInMethods': FieldValue.arrayUnion(['google']),
-              'updatedAt': FieldValue.serverTimestamp(),
-            });
-            _showSnackBar('Berhasil menautkan akun Google!', isError: false);
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => MainScreen()),
-            );
-            return;
-          } else {
-            _showSnackBar(
-              'Harap login terlebih dahulu dengan email & password.',
-              isError: true,
-            );
-          }
-        } else {
-          _showSnackBar('Login Google dibatalkan', isError: true);
-          return;
-        }
-      }
-
-      if (mounted) {
-        if (result.success && result.user != null) {
-          print('✅ Google Sign-In successful');
-          _showSnackBar('Login berhasil!', isError: false);
-
-          await Future.delayed(const Duration(milliseconds: 500));
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => MainScreen()),
-          );
-        } else {
-          print('❌ Google Sign-In failed: ${result.message}');
-
-          // Check if user is actually signed in despite the error
-          final currentUser = _authService.currentUser;
-          print(
-              '🔄 Checking current user after Google Sign-In: ${currentUser?.email}');
-
-          if (currentUser != null) {
-            print('🎯 User is actually signed in with Google! Proceeding...');
-            _showSnackBar('Login berhasil!', isError: false);
-
-            await Future.delayed(const Duration(milliseconds: 500));
-
-            // Check if user data exists and needs phone number
-            final userData = await _authService.getUserData(currentUser.uid);
-
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => MainScreen()),
-            );
-          } else {
-            _showSnackBar(result.message ?? 'Google login gagal',
-                isError: true);
-          }
-        }
+      } else {
+        _showSnackBar(result.message ?? 'Login gagal', isError: true);
       }
     } catch (e) {
-      print('💥 Exception during Google Sign-In: $e');
-      print('🔍 Exception type: ${e.runtimeType}');
+      print('💥 Google Login Error: $e');
+      _showSnackBar('Terjadi kesalahan: ${e.toString()}', isError: true);
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      setState(() => _isLoading = false);
     }
   }
 
