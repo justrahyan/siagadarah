@@ -14,7 +14,7 @@
 
     
     <application
-        android:label="siaga_darah"
+        android:label="Siaga Darah"
         android:name="androidx.multidex.MultiDexApplication"
         android:requestLegacyExternalStorage="true"
         android:icon="@mipmap/ic_launcher">

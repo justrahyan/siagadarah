@@ -37,6 +37,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final userDoc =
             await _firestore.collection('users').doc(user.uid).get();
 
+        if (!mounted) return; // ⛑️ Cegah error setelah dispose
+
         if (userDoc.exists) {
           setState(() {
             _userData = userDoc.data();
@@ -51,12 +53,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           print('❌ User document not found');
         }
       } else {
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'Tidak ada pengguna yang login';
           _isLoading = false;
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Gagal memuat data: ${e.toString()}';
         _isLoading = false;

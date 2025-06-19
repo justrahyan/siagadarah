@@ -3,6 +3,8 @@ import 'package:siaga_darah/themes/colors.dart';
 import 'dart:async';
 import 'OnboardingScreen.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'main_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -101,33 +103,48 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _startAnimations() async {
-    // Start logo animation
     await _logoController.forward();
-
-    // Start text animation after logo
     await _textController.forward();
-
-    // Start loading animation
     _loadingController.repeat();
 
     await Future.delayed(const Duration(milliseconds: 500));
 
-    // Minta izin
     await _requestPermissions();
 
-    // Lanjut ke Onboarding
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const OnboardingScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 800),
-        ),
-      );
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user != null && user.emailVerified) {
+      // Sudah login & email terverifikasi → ke MainScreen
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                const MainScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 800),
+          ),
+        );
+      }
+    } else {
+      // Belum login → ke Onboarding
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                const OnboardingScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 800),
+          ),
+        );
+      }
     }
   }
 
