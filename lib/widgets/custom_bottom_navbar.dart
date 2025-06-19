@@ -44,7 +44,7 @@ class CustomBottomNavbar extends StatelessWidget {
                 _buildNavItem(0, Icons.home_outlined, "Beranda"),
                 _buildNavItem(1, Icons.favorite_outline, "Donor"),
                 // Placeholder untuk FAB di tengah
-                SizedBox(
+                const SizedBox(
                     width:
                         fabSize + 20), // Memberikan ruang lebih dari ukuran FAB
                 _buildNavItem(3, Icons.history, "Riwayat"),
