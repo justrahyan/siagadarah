@@ -1,16 +1,47 @@
-# siaga_darah
+# 🩸 SiagaDarah – Platform Darurat Donor Darah
 
-A new Flutter project.
+**SiagaDarah** adalah aplikasi mobile berbasis Flutter & Firebase yang dirancang untuk memfasilitasi koneksi cepat antara pencari darah dan pendonor dalam situasi darurat. Dibangun untuk mempercepat tindakan kemanusiaan dengan teknologi modern.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 🚨 Fitur Utama
 
-A few resources to get you started if this is your first Flutter project:
+### 🔍 Pencari Darah
+- Kirim permintaan darah berdasarkan golongan & lokasi
+- Lihat pendonor aktif yang siap membantu
+- Notifikasi real-time saat pendonor merespons
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### 🦸‍♂️ Pendonor
+- Aktifkan **Mode Siaga** untuk menjadi pendonor aktif
+- Terima permintaan darah dari sekitar Anda
+- Kirim lokasi & konfirmasi kehadiran
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### 🛠 Admin
+- Tambah & kelola event donor darah
+- Unggah dan edit konten edukasi
+- Verifikasi dan monitoring aktivitas pengguna
+
+---
+
+## 🧰 Teknologi
+
+| Teknologi              | Fungsi                                         |
+|------------------------|-----------------------------------------------|
+| **Flutter**            | UI/UX dan pengembangan aplikasi mobile        |
+| **Firebase Auth**      | Login dengan Email & Google                   |
+| **Cloud Firestore**    | Penyimpanan data pengguna, permintaan, event |
+| **Firebase Messaging** | Kirim notifikasi ke pendonor & pencari        |
+| **Google Maps API**    | Lokasi pengguna & pelacakan real-time         |
+
+---
+
+## 🧭 Alur Navigasi
+
+```mermaid
+flowchart TD
+  Splash --> AuthCheck
+  AuthCheck -->|Login| MainApp
+  AuthCheck -->|Belum Login| LoginPage
+  MainApp -->|Pencari| PencariHome
+  MainApp -->|Pendonor| PendonorHome
+  MainApp -->|Admin| AdminDashboard
