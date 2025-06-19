@@ -1,9 +1,14 @@
+import 'package:another_flushbar/flushbar.dart';
 import 'package:flutter/material.dart';
 import 'LoginScreen.dart';
 import 'main_screen.dart';
 import '../service/auth_service.dart';
+import 'package:siaga_darah/themes/colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
+
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
 }
@@ -101,16 +106,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (mounted) {
         if (result.success && result.user != null) {
+          await _authService.sendEmailVerification();
+
           print('✅ Registration successful');
-          _showSnackBar('Registrasi berhasil!', isError: false);
+          // _showSnackBar('Registrasi berhasil!', isError: false);
 
           // Small delay to ensure UI updates properly
-          await Future.delayed(Duration(milliseconds: 500));
+          await Future.delayed(Duration(milliseconds: 300));
 
           // Navigate to main screen
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => MainScreen()),
+            MaterialPageRoute(
+              builder: (context) => LoginScreen(showSuccessMessage: true),
+            ),
           );
         } else {
           print('❌ Registration failed: ${result.message}');
@@ -124,7 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             print('🎯 User is actually registered! Proceeding...');
             _showSnackBar('Registrasi berhasil!', isError: false);
 
-            await Future.delayed(Duration(milliseconds: 500));
+            await Future.delayed(const Duration(milliseconds: 500));
 
             Navigator.pushReplacement(
               context,
@@ -146,7 +155,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           print('🎯 User registered despite exception! Proceeding...');
           _showSnackBar('Registrasi berhasil!', isError: false);
 
-          await Future.delayed(Duration(milliseconds: 500));
+          await Future.delayed(const Duration(milliseconds: 500));
 
           Navigator.pushReplacement(
             context,
@@ -172,7 +181,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       print('🔍 Starting Google registration process...');
-      final result = await _authService.signInWithGoogle();
+      final result = await _authService.signInWithGoogle(isRegister: true);
 
       print('📊 Google registration result: ${result.success}');
       print('💬 Message: ${result.message}');
@@ -181,14 +190,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         if (result.success && result.user != null) {
           print('✅ Google registration successful');
-          _showSnackBar('Registrasi berhasil!', isError: false);
 
           // Small delay to ensure UI updates properly
-          await Future.delayed(Duration(milliseconds: 500));
+          await Future.delayed(const Duration(milliseconds: 500));
 
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => MainScreen()),
+            MaterialPageRoute(
+                builder: (context) => MainScreen(
+                      showSuccessMessage: true,
+                      successMessage: 'Registrasi berhasil!',
+                    )),
           );
         } else {
           print('❌ Google registration failed: ${result.message}');
@@ -200,13 +212,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
           if (currentUser != null) {
             print('🎯 User is actually registered with Google! Proceeding...');
-            _showSnackBar('Registrasi berhasil!', isError: false);
 
-            await Future.delayed(Duration(milliseconds: 500));
+            await Future.delayed(const Duration(milliseconds: 500));
 
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => MainScreen()),
+              MaterialPageRoute(
+                  builder: (context) => MainScreen(
+                        showSuccessMessage: true,
+                        successMessage: 'Registrasi berhasil!',
+                      )),
             );
           } else {
             _showSnackBar(result.message ?? 'Google registrasi gagal',
@@ -224,13 +239,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (currentUser != null) {
           print(
               '🎯 User registered with Google despite exception! Proceeding...');
-          _showSnackBar('Registrasi berhasil!', isError: false);
-
-          await Future.delayed(Duration(milliseconds: 500));
+          await Future.delayed(const Duration(milliseconds: 500));
 
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => MainScreen()),
+            MaterialPageRoute(
+                builder: (context) => MainScreen(
+                      showSuccessMessage: true,
+                      successMessage: 'Registrasi berhasil!',
+                    )),
           );
         } else {
           _showSnackBar('Terjadi kesalahan: ${e.toString()}', isError: true);
@@ -248,78 +265,77 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _showSnackBar(String message, {required bool isError}) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
-        behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+    Flushbar(
+      messageText: Text(
+        message,
+        style: GoogleFonts.quicksand(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
         ),
-        duration: Duration(seconds: isError ? 4 : 2),
       ),
-    );
+      backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
+      margin: const EdgeInsets.all(16),
+      borderRadius: BorderRadius.circular(8),
+      duration: Duration(seconds: isError ? 4 : 2),
+      flushbarPosition: FlushbarPosition.TOP,
+      icon: Icon(
+        isError ? Icons.error : Icons.check_circle,
+        color: Colors.white,
+      ),
+    ).show(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFDF2F2),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: 20),
+              const SizedBox(height: 60),
 
               // Title
               Center(
                 child: Text(
                   'Daftar',
-                  style: TextStyle(
-                    fontSize: 32,
+                  style: GoogleFonts.quicksand(
+                    fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: AppColors.darkText,
                   ),
                 ),
               ),
 
-              SizedBox(height: 8),
+              const SizedBox(height: 4), // Reduced from 8
 
               // Subtitle
               Center(
                 child: Text(
                   'Buat akun baru dan mulai berkontribusi.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
+                  style: GoogleFonts.quicksand(
+                    fontSize: 14, // Reduced from 16
+                    color: AppColors.paragraph,
                   ),
                 ),
               ),
 
-              SizedBox(height: 40),
+              const SizedBox(height: 24), // Reduced from 40
 
               // Name Field
               Text(
                 'Nama',
-                style: TextStyle(
-                  fontSize: 16,
+                style: GoogleFonts.quicksand(
+                  fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Colors.black87,
+                  color: AppColors.darkText,
                 ),
               ),
 
-              SizedBox(height: 8),
+              const SizedBox(height: 6), // Reduced from 8
 
               Container(
                 decoration: BoxDecoration(
@@ -330,34 +346,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: TextFormField(
                   controller: _nameController,
                   textCapitalization: TextCapitalization.words,
+                  cursorColor: AppColors.primary,
+                  style: GoogleFonts.quicksand(
+                    color: AppColors.darkText,
+                    fontSize: 14,
+                  ),
                   decoration: InputDecoration(
-                    hintText: 'Ival Permana',
-                    hintStyle: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 16,
+                    hintText: 'Masukkan nama anda',
+                    hintStyle: GoogleFonts.quicksand(
+                      color: AppColors.paragraph,
+                      fontSize: 14,
                     ),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 16,
+                      vertical: 12, // Reduced from 16
                     ),
                   ),
                 ),
               ),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 16), // Reduced from 20
 
               // Email Field
               Text(
                 'Email',
-                style: TextStyle(
-                  fontSize: 16,
+                style: GoogleFonts.quicksand(
+                  fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Colors.black87,
+                  color: AppColors.darkText,
                 ),
               ),
 
-              SizedBox(height: 8),
+              const SizedBox(height: 6), // Reduced from 8
 
               Container(
                 decoration: BoxDecoration(
@@ -368,34 +389,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
+                  cursorColor: AppColors.primary,
+                  style: GoogleFonts.quicksand(
+                    color: AppColors.darkText,
+                    fontSize: 14,
+                  ),
                   decoration: InputDecoration(
-                    hintText: 'ival_p@gmail.com',
-                    hintStyle: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 16,
+                    hintText: 'Masukkan email anda',
+                    hintStyle: GoogleFonts.quicksand(
+                      color: AppColors.paragraph,
+                      fontSize: 14,
                     ),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 16,
+                      vertical: 12, // Reduced from 16
                     ),
                   ),
                 ),
               ),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 16), // Reduced from 20
 
               // Phone Field
               Text(
-                'Nomor Telepon',
-                style: TextStyle(
-                  fontSize: 16,
+                'Nomor HP',
+                style: GoogleFonts.quicksand(
+                  fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Colors.black87,
+                  color: AppColors.darkText,
                 ),
               ),
 
-              SizedBox(height: 8),
+              const SizedBox(height: 6), // Reduced from 8
 
               Container(
                 decoration: BoxDecoration(
@@ -406,34 +432,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
+                  cursorColor: AppColors.primary,
+                  style: GoogleFonts.quicksand(
+                    color: AppColors.darkText,
+                    fontSize: 14,
+                  ),
                   decoration: InputDecoration(
-                    hintText: '081234567890',
-                    hintStyle: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 16,
+                    hintText: 'Masukkan no hp anda',
+                    hintStyle: GoogleFonts.quicksand(
+                      color: AppColors.paragraph,
+                      fontSize: 14,
                     ),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 16,
+                      vertical: 12, // Reduced from 16
                     ),
                   ),
                 ),
               ),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 16), // Reduced from 20
 
               // Password Field
               Text(
                 'Password',
-                style: TextStyle(
-                  fontSize: 16,
+                style: GoogleFonts.quicksand(
+                  fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Colors.black87,
+                  color: AppColors.darkText,
                 ),
               ),
 
-              SizedBox(height: 8),
+              const SizedBox(height: 6), // Reduced from 8
 
               Container(
                 decoration: BoxDecoration(
@@ -444,24 +475,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: TextFormField(
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
+                  cursorColor: AppColors.primary,
+                  style: GoogleFonts.quicksand(
+                    color: AppColors.darkText,
+                    fontSize: 14,
+                  ),
                   decoration: InputDecoration(
-                    hintText: '••••••••',
-                    hintStyle: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 20,
-                      letterSpacing: 2,
+                    hintText: 'Masukkan password anda',
+                    hintStyle: GoogleFonts.quicksand(
+                      color: AppColors.paragraph,
+                      fontSize: 14,
                     ),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 16,
+                      vertical: 12, // Reduced from 16
                     ),
                     suffixIcon: IconButton(
+                      iconSize: 18,
                       icon: Icon(
                         _isPasswordVisible
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: Colors.grey.shade600,
+                        color: AppColors.paragraph,
                       ),
                       onPressed: () {
                         setState(() {
@@ -473,11 +509,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 12), // Reduced from 20
 
               // Terms and Conditions
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment
+                    .center, // Ubah ke center untuk penyelarasan vertikal
                 children: [
                   Checkbox(
                     value: _agreeToTerms,
@@ -486,56 +523,55 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         _agreeToTerms = value ?? false;
                       });
                     },
-                    activeColor: Colors.red.shade400,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
+                    activeColor: AppColors.primary,
+                    // materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, // Hapus ini atau coba-coba
+                    visualDensity:
+                        VisualDensity.compact, // Pertahankan ini atau coba-coba
                   ),
                   Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 12),
-                      child: RichText(
-                        text: TextSpan(
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
-                          ),
-                          children: [
-                            TextSpan(text: 'Saya setuju dengan '),
-                            TextSpan(
-                              text: 'Kebijakan Privasi',
-                              style: TextStyle(
-                                color: Colors.red.shade400,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                            TextSpan(text: ' dan '),
-                            TextSpan(
-                              text: 'Syarat & Ketentuan',
-                              style: TextStyle(
-                                color: Colors.red.shade400,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ],
+                    // Hapus Padding di sini atau atur EdgeInsets.zero
+                    child: RichText(
+                      text: TextSpan(
+                        style: GoogleFonts.quicksand(
+                          fontSize: 12, // Reduced from 14
+                          color: AppColors.paragraph,
                         ),
+                        children: [
+                          const TextSpan(text: 'Saya setuju dengan '),
+                          TextSpan(
+                            text: 'Kebijakan Privasi',
+                            style: GoogleFonts.quicksand(
+                              color: AppColors.primary,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                          const TextSpan(text: ' dan '),
+                          TextSpan(
+                            text: 'Syarat & Ketentuan',
+                            style: GoogleFonts.quicksand(
+                              color: AppColors.primary,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ],
               ),
 
-              SizedBox(height: 30),
+              const SizedBox(height: 14), // Reduced from 30
 
               // Register Button
               SizedBox(
                 width: double.infinity,
-                height: 52,
+                height: 48, // Reduced from 52
                 child: ElevatedButton(
                   onPressed:
                       (_isLoading || !_agreeToTerms) ? null : _handleRegister,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: (_agreeToTerms)
-                        ? Colors.red.shade400
+                        ? AppColors.primary
                         : Colors.grey.shade300,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -543,7 +579,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     elevation: 0,
                   ),
                   child: _isLoading
-                      ? SizedBox(
+                      ? const SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
@@ -554,8 +590,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         )
                       : Text(
                           'Daftar',
-                          style: TextStyle(
-                            fontSize: 16,
+                          style: GoogleFonts.quicksand(
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
@@ -563,7 +599,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
 
-              SizedBox(height: 24),
+              const SizedBox(height: 16), // Reduced from 24
 
               // Or divider
               Row(
@@ -575,12 +611,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
                       'Atau',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
+                      style: GoogleFonts.quicksand(
+                        color: AppColors.paragraph,
+                        fontSize: 12,
                       ),
                     ),
                   ),
@@ -593,12 +629,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ],
               ),
 
-              SizedBox(height: 24),
+              const SizedBox(height: 16), // Reduced from 24
 
               // Google Register Button
               SizedBox(
                 width: double.infinity,
-                height: 52,
+                height: 48, // Reduced from 52
                 child: OutlinedButton(
                   onPressed: _isLoading ? null : _handleGoogleRegister,
                   style: OutlinedButton.styleFrom(
@@ -611,32 +647,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Simple Google Icon
                       Container(
                         width: 20,
                         height: 20,
                         decoration: BoxDecoration(
-                          color: Colors.red.shade400,
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Center(
-                          child: Text(
-                            'G',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
+                        child: Image.asset(
+                          'assets/images/logo_google.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       Text(
                         'Daftar dengan Google',
-                        style: TextStyle(
-                          fontSize: 16,
+                        style: GoogleFonts.quicksand(
+                          fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: Colors.black87,
+                          color: AppColors.darkText,
                         ),
                       ),
                     ],
@@ -644,7 +672,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
 
-              SizedBox(height: 30),
+              const SizedBox(height: 20), // Reduced from 30
 
               // Login link
               Center(
@@ -653,8 +681,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     Text(
                       'Sudah punya akun? ',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
+                      style: GoogleFonts.quicksand(
+                        color: AppColors.paragraph,
                         fontSize: 14,
                       ),
                     ),
@@ -665,10 +693,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       },
                       child: Text(
                         'Masuk',
-                        style: TextStyle(
-                          color: Colors.red.shade400,
+                        style: GoogleFonts.quicksand(
+                          color: AppColors.primary,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                          decorationColor: AppColors.primary,
                         ),
                       ),
                     ),
@@ -676,7 +706,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
 
-              SizedBox(height: 40),
+              const SizedBox(height: 20), // Reduced from 40
             ],
           ),
         ),
