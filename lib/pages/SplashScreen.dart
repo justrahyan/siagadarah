@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:siaga_darah/themes/colors.dart';
 import 'dart:async';
-import 'OnboardingScreen.dart'; // Import onboarding screen
+import 'OnboardingScreen.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -26,19 +28,19 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Logo animation controller
     _logoController = AnimationController(
-      duration: Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
 
     // Text animation controller
     _textController = AnimationController(
-      duration: Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
 
     // Loading animation controller
     _loadingController = AnimationController(
-      duration: Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
 
@@ -64,6 +66,40 @@ class _SplashScreenState extends State<SplashScreen>
     _startAnimations();
   }
 
+  Future<void> _requestPermissions() async {
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.location,
+      Permission.notification,
+      Permission.storage,
+      // Tambahan: Permission.photos jika kamu butuh akses galeri (iOS)
+    ].request();
+
+    if (statuses.values.any((status) => status.isPermanentlyDenied)) {
+      if (mounted) {
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Izin Diperlukan'),
+            content: const Text(
+                'Beberapa izin ditolak permanen. Silakan buka pengaturan aplikasi untuk mengaktifkan secara manual.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Tutup'),
+              ),
+              TextButton(
+                onPressed: () {
+                  openAppSettings();
+                },
+                child: const Text('Buka Pengaturan'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
   void _startAnimations() async {
     // Start logo animation
     await _logoController.forward();
@@ -74,23 +110,25 @@ class _SplashScreenState extends State<SplashScreen>
     // Start loading animation
     _loadingController.repeat();
 
-    // Navigate to onboarding after 4 seconds
-    Timer(Duration(seconds: 4), () {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                OnboardingScreen(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: Duration(milliseconds: 800),
-          ),
-        );
-      }
-    });
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // Minta izin
+    await _requestPermissions();
+
+    // Lanjut ke Onboarding
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              OnboardingScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 800),
+        ),
+      );
+    }
   }
 
   @override
@@ -110,7 +148,7 @@ class _SplashScreenState extends State<SplashScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Spacer(flex: 2),
+              const Spacer(flex: 2),
 
               // Logo dengan animasi
               AnimatedBuilder(
@@ -133,7 +171,7 @@ class _SplashScreenState extends State<SplashScreen>
                 },
               ),
 
-              SizedBox(height: 32),
+              const SizedBox(height: 32),
 
               // Text dengan animasi fade in
               AnimatedBuilder(
@@ -141,20 +179,21 @@ class _SplashScreenState extends State<SplashScreen>
                 builder: (context, child) {
                   return Opacity(
                     opacity: _textFadeAnimation.value,
-                    child: Text(
+                    child: const Text(
                       'SiagaDarah',
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: AppColors.darkText,
                         letterSpacing: 1.2,
+                        fontFamily: 'Poppins',
                       ),
                     ),
                   );
                 },
               ),
 
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
 
               // Subtitle
               AnimatedBuilder(
@@ -165,16 +204,17 @@ class _SplashScreenState extends State<SplashScreen>
                     child: Text(
                       'Donor Darah Digital',
                       style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey.shade600,
+                        fontSize: 20,
+                        color: AppColors.paragraph,
                         letterSpacing: 0.5,
+                        fontFamily: 'QuickSand',
                       ),
                     ),
                   );
                 },
               ),
 
-              Spacer(flex: 2),
+              const Spacer(flex: 2),
 
               // Loading indicator
               AnimatedBuilder(
@@ -204,7 +244,7 @@ class _SplashScreenState extends State<SplashScreen>
                 },
               ),
 
-              SizedBox(height: 60),
+              const SizedBox(height: 60),
             ],
           ),
         ),

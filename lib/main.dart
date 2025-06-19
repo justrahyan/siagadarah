@@ -16,15 +16,16 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'SiagaDarah',
       theme: ThemeData(
         primarySwatch: Colors.red,
-        fontFamily: 'Roboto',
       ),
-      home: SplashScreen(),
+      home: const SplashScreen(),
       debugShowCheckedModeBanner: false,
     );
   }

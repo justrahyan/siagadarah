@@ -1,9 +1,21 @@
+import 'package:another_flushbar/flushbar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:siaga_darah/pages/ProfileScreen.dart';
 import '../service/auth_service.dart';
 import '../widgets/custom_bottom_navbar.dart';
-import 'LoginScreen.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:siaga_darah/themes/theme.dart';
 
 class MainScreen extends StatefulWidget {
+  final bool showSuccessMessage;
+  final String successMessage;
+  const MainScreen({
+    Key? key,
+    this.showSuccessMessage = false,
+    this.successMessage = 'Login berhasil!',
+  }) : super(key: key);
+
   @override
   _MainScreenState createState() => _MainScreenState();
 }
@@ -18,11 +30,41 @@ class _MainScreenState extends State<MainScreen> {
   String _userBloodType = '-';
   int _donationCount = 0;
   bool _isLoading = true;
+  bool _isSiagaActive = false;
 
   @override
   void initState() {
     super.initState();
+    if (widget.showSuccessMessage) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showSnackBar(widget.successMessage, isError: false);
+      });
+    }
     _loadUserData();
+  }
+
+  void _showSnackBar(String message, {required bool isError}) {
+    if (!mounted) return;
+
+    Flushbar(
+      messageText: Text(
+        message,
+        style: GoogleFonts.quicksand(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
+      margin: const EdgeInsets.all(16),
+      borderRadius: BorderRadius.circular(8),
+      duration: Duration(seconds: isError ? 4 : 2),
+      flushbarPosition: FlushbarPosition.TOP,
+      icon: Icon(
+        isError ? Icons.error : Icons.check_circle,
+        color: Colors.white,
+      ),
+    ).show(context);
   }
 
   Future<void> _loadUserData() async {
@@ -36,6 +78,7 @@ class _MainScreenState extends State<MainScreen> {
                 userData?['name'] ?? user.displayName ?? 'Pengguna SiagaDarah';
             _userBloodType = userData?['bloodType'] ?? '-';
             _donationCount = userData?['stats']?['donationsCompleted'] ?? 0;
+            _isSiagaActive = userData?['isDonor'] ?? false;
             _isLoading = false;
           });
         }
@@ -54,63 +97,23 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  Future<void> _handleLogout() async {
-    bool? shouldLogout = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Logout'),
-          content: Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child:
-                  Text('Batal', style: TextStyle(color: Colors.grey.shade600)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child:
-                  Text('Logout', style: TextStyle(color: Colors.red.shade600)),
-            ),
-          ],
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        );
-      },
-    );
-
-    if (shouldLogout == true) {
-      setState(() => _isLoggingOut = true);
-      try {
-        await _authService.signOut();
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => LoginScreen()),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() => _isLoggingOut = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Gagal logout: ${e.toString()}'),
-              backgroundColor: Colors.red.shade600,
-            ),
-          );
-        }
-      }
-    }
-  }
-
   void _onNavbarTap(int index) {
     if (index == 2) {
-      // Handle "Butuh Darah" action
+      // Butuh Darah
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Fitur Butuh Darah akan segera hadir!'),
-          backgroundColor: Colors.red.shade400,
+          content: const Text('Fitur Butuh Darah akan segera hadir!'),
+          backgroundColor: AppColors.primary,
         ),
+      );
+      return;
+    }
+
+    if (index == 4) {
+      // Navigasi ke halaman Profil
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
       );
       return;
     }
@@ -119,23 +122,63 @@ class _MainScreenState extends State<MainScreen> {
       _currentIndex = index;
     });
 
-    // Show placeholder messages for other tabs
     switch (index) {
       case 1:
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Halaman Donor akan segera hadir!')),
+          const SnackBar(content: Text('Halaman Donor akan segera hadir!')),
         );
         break;
       case 3:
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Halaman Riwayat akan segera hadir!')),
+          const SnackBar(content: Text('Halaman Riwayat akan segera hadir!')),
         );
         break;
-      case 4:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Halaman Profil akan segera hadir!')),
-        );
-        break;
+    }
+  }
+
+  // Potong nama pengguna jadi 2 kata pertama
+  String getFirstTwoWords(String fullName) {
+    final words = fullName.trim().split(' ');
+    return words.length >= 2 ? '${words[0]} ${words[1]}' : words.join(' ');
+  }
+
+  // Logic Mode Siaga
+  // bool _isSiagaActive = snapshot['isDonor'] ?? false;
+  void _onToggleSiaga(bool newValue) async {
+    final user = _authService.currentUser;
+    if (user == null) return;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'isDonor': newValue});
+
+      setState(() {
+        _isSiagaActive = newValue;
+      });
+
+      Flushbar(
+        message: newValue
+            ? 'Mode Siaga telah diaktifkan. Terima kasih telah siap membantu!'
+            : 'Mode Siaga dinonaktifkan.',
+        backgroundColor: Colors.green.shade700,
+        margin: const EdgeInsets.all(12),
+        borderRadius: BorderRadius.circular(8),
+        duration: const Duration(seconds: 2),
+        flushbarPosition: FlushbarPosition.TOP,
+        icon: const Icon(Icons.check_circle, color: Colors.white),
+      ).show(context);
+    } catch (e) {
+      Flushbar(
+        message: 'Gagal memperbarui status Mode Siaga',
+        backgroundColor: Colors.red.shade700,
+        margin: const EdgeInsets.all(12),
+        borderRadius: BorderRadius.circular(8),
+        duration: const Duration(seconds: 2),
+        flushbarPosition: FlushbarPosition.TOP,
+        icon: const Icon(Icons.error, color: Colors.white),
+      ).show(context);
     }
   }
 
@@ -143,7 +186,7 @@ class _MainScreenState extends State<MainScreen> {
     if (_isLoading) {
       return Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.red.shade400),
+          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
         ),
       );
     }
@@ -155,17 +198,18 @@ class _MainScreenState extends State<MainScreen> {
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.red.shade400, Colors.red.shade500],
+                colors: [AppColors.primary, Colors.red.shade500],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.only(
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(24),
                 bottomRight: Radius.circular(24),
               ),
             ),
             child: Padding(
-              padding: EdgeInsets.all(20),
+              padding: const EdgeInsets.only(
+                  left: 16, top: 32, right: 16, bottom: 16),
               child: Column(
                 children: [
                   // Top bar with greeting and logout
@@ -177,51 +221,130 @@ class _MainScreenState extends State<MainScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Icon(Icons.favorite,
-                                    color: Colors.white, size: 24),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Selamat datang di SiagaDarah',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                // Logo di kiri
+                                Image.asset(
+                                  'assets/images/logo/siaga-darah-logo-white.png',
+                                  width: 36,
+                                  height: 36,
+                                  fit: BoxFit.contain,
+                                ),
+                                const SizedBox(width: 12),
+
+                                // Teks di kanan logo (dua baris)
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    RichText(
+                                      text: TextSpan(
+                                        children: [
+                                          TextSpan(
+                                            text: 'Selamat datang di ',
+                                            style: GoogleFonts.quicksand(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          TextSpan(
+                                            text: 'SiagaDarah',
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    RichText(
+                                      text: TextSpan(
+                                        children: [
+                                          TextSpan(
+                                            text: 'Halo, ',
+                                            style: GoogleFonts.quicksand(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.normal,
+                                            ),
+                                          ),
+                                          TextSpan(
+                                            text: getFirstTwoWords(_userName),
+                                            style: GoogleFonts.quicksand(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          TextSpan(
+                                            text: '!',
+                                            style: GoogleFonts.quicksand(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.normal,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Halo, $_userName!',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
                             ),
                           ],
                         ),
                       ),
-                      IconButton(
-                        onPressed: _isLoggingOut ? null : _handleLogout,
-                        icon: _isLoggingOut
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
+                      Stack(
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD02B33),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: Image.asset(
+                                'assets/images/icon/notifikasi.png',
+                                width: 24,
+                                height: 24,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            right: 2,
+                            top: 2,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFF0000),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '3', // Dummy jumlah notifikasi
+                                  style: GoogleFonts.quicksand(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              )
-                            : Icon(Icons.logout, color: Colors.white, size: 24),
-                        tooltip: 'Logout',
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
 
-                  SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
                   // Info Cards Row
                   Row(
@@ -229,15 +352,16 @@ class _MainScreenState extends State<MainScreen> {
                       // Blood Type Card
                       Expanded(
                         child: Container(
-                          padding: EdgeInsets.all(16),
+                          padding: const EdgeInsets.only(
+                              left: 16, top: 16, right: 16),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: AppColors.secondary,
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.1),
                                 blurRadius: 8,
-                                offset: Offset(0, 2),
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
@@ -246,34 +370,32 @@ class _MainScreenState extends State<MainScreen> {
                             children: [
                               Text(
                                 'Golongan Darahmu,',
-                                style: TextStyle(
+                                style: GoogleFonts.quicksand(
                                   fontSize: 12,
-                                  color: Colors.grey.shade600,
+                                  color: AppColors.darkText,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              SizedBox(height: 8),
+                              const SizedBox(height: 8),
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    _userBloodType,
-                                    style: TextStyle(
+                                    'B+',
+                                    style: GoogleFonts.quicksand(
                                       fontSize: 32,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.red.shade400,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primary,
                                     ),
                                   ),
-                                  SizedBox(width: 8),
-                                  Container(
-                                    padding: EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red.shade50,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      Icons.medical_services_outlined,
-                                      color: Colors.red.shade400,
-                                      size: 20,
-                                    ),
+                                  const SizedBox(width: 8),
+                                  Image.asset(
+                                    'assets/images/blood-bag.png',
+                                    width: 64,
+                                    height: 64,
+                                    fit: BoxFit.contain,
                                   ),
                                 ],
                               ),
@@ -282,20 +404,21 @@ class _MainScreenState extends State<MainScreen> {
                         ),
                       ),
 
-                      SizedBox(width: 16),
+                      const SizedBox(width: 16),
 
                       // Donation Count Card
                       Expanded(
                         child: Container(
-                          padding: EdgeInsets.all(16),
+                          padding: const EdgeInsets.only(
+                              left: 16, top: 16, right: 16),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: AppColors.skyBlue,
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.1),
                                 blurRadius: 8,
-                                offset: Offset(0, 2),
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
@@ -303,35 +426,33 @@ class _MainScreenState extends State<MainScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Jumlah Kontribusimu,',
-                                style: TextStyle(
+                                'Golongan Darahmu,',
+                                style: GoogleFonts.quicksand(
                                   fontSize: 12,
-                                  color: Colors.grey.shade600,
+                                  color: AppColors.darkBlue,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              SizedBox(height: 8),
+                              const SizedBox(height: 8),
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    '$_donationCount',
-                                    style: TextStyle(
+                                    '6',
+                                    style: GoogleFonts.quicksand(
                                       fontSize: 32,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue.shade600,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.darkBlue,
                                     ),
                                   ),
-                                  SizedBox(width: 8),
-                                  Container(
-                                    padding: EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.shade50,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      Icons.assignment_turned_in,
-                                      color: Colors.blue.shade600,
-                                      size: 20,
-                                    ),
+                                  const SizedBox(width: 8),
+                                  Image.asset(
+                                    'assets/images/list.png',
+                                    width: 64,
+                                    height: 64,
+                                    fit: BoxFit.contain,
                                   ),
                                 ],
                               ),
@@ -346,92 +467,100 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ),
 
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
 
-          // Emergency Alert Banner
+          // Mode Siaga
           Container(
-            margin: EdgeInsets.symmetric(horizontal: 20),
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.orange.shade300, Colors.orange.shade400],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.warning_amber_rounded,
-                    color: Colors.white, size: 24),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Siaga Donor, Siap Bantu Kapan Saja!',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Hidupkan Mode Siaga & Jadi Pendonor Sesama',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding:
+                  const EdgeInsets.only(left: 4, top: 16, right: 4, bottom: 16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.orange.shade300, Colors.orange.shade400],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
                 ),
-              ],
-            ),
-          ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Mode Siaga Aktif!',
+                          style: GoogleFonts.quicksand(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Hidupkan Mode Siaga & Jadi Penolong Sesama',
+                          style: GoogleFonts.quicksand(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: _isSiagaActive,
+                    onChanged: _onToggleSiaga,
+                    activeColor: Colors.white,
+                    activeTrackColor: Colors.red.shade400,
+                    inactiveThumbColor: Colors.grey.shade300,
+                    inactiveTrackColor: Colors.grey.shade500,
+                  ),
+                ],
+              )),
 
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
 
           // Blood Stock Section
           Container(
-            margin: EdgeInsets.symmetric(horizontal: 20),
+            margin: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.bloodtype, color: Colors.red.shade400, size: 20),
-                    SizedBox(width: 8),
+                    Icon(Icons.bloodtype, color: AppColors.primary, size: 20),
+                    const SizedBox(width: 4),
                     Text(
                       'Stok Darah PMI Makassar',
-                      style: TextStyle(
+                      style: GoogleFonts.quicksand(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: AppColors.darkText,
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   'Terakhir diperbarui: ${_getFormattedDate()}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: GoogleFonts.quicksand(
+                      fontSize: 12,
+                      color: AppColors.paragraph,
+                      fontWeight: FontWeight.w500),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 _buildBloodStockChart(),
               ],
             ),
           ),
 
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
 
           // Events Section
           Container(
-            margin: EdgeInsets.symmetric(horizontal: 20),
+            margin: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               children: [
                 Row(
@@ -441,13 +570,13 @@ class _MainScreenState extends State<MainScreen> {
                       children: [
                         Icon(Icons.event,
                             color: Colors.blue.shade600, size: 20),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Text(
                           'Event Terdekat',
-                          style: TextStyle(
+                          style: GoogleFonts.quicksand(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            color: AppColors.darkText,
                           ),
                         ),
                       ],
@@ -455,15 +584,15 @@ class _MainScreenState extends State<MainScreen> {
                     TextButton(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
+                          const SnackBar(
                               content: Text(
                                   'Melihat semua event akan segera hadir!')),
                         );
                       },
                       child: Text(
                         'Lihat semua',
-                        style: TextStyle(
-                          color: Colors.red.shade400,
+                        style: GoogleFonts.quicksand(
+                          color: AppColors.primary,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -471,7 +600,7 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                   ],
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -480,21 +609,21 @@ class _MainScreenState extends State<MainScreen> {
                         'Awal Donor Darah',
                         '16 Jun 2025, 08:00 - selesai',
                         'Beranda',
-                        Colors.red.shade400,
+                        AppColors.primary,
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       _buildEventCard(
                         'Donor Darah Gratis',
                         '18 Jun 2025, 08:00 - selesai',
                         'Butuh',
                         Colors.green.shade400,
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       _buildEventCard(
                         'Awal Donor Darah',
                         '20 Jun 2025, 08:00 - selesai',
                         'Beranda',
-                        Colors.red.shade400,
+                        AppColors.primary,
                       ),
                     ],
                   ),
@@ -504,7 +633,7 @@ class _MainScreenState extends State<MainScreen> {
           ),
 
           // Bottom padding for navbar
-          SizedBox(height: 100),
+          const SizedBox(height: 100),
         ],
       ),
     );
@@ -569,21 +698,21 @@ class _MainScreenState extends State<MainScreen> {
             size: 80,
             color: Colors.grey.shade400,
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           Text(
             pageTitle,
-            style: TextStyle(
+            style: GoogleFonts.quicksand(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Colors.grey.shade700,
             ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Text(
             'Fitur ini akan segera hadir!',
-            style: TextStyle(
+            style: GoogleFonts.quicksand(
               fontSize: 16,
-              color: Colors.grey.shade600,
+              color: AppColors.paragraph,
             ),
           ),
         ],
@@ -600,7 +729,7 @@ class _MainScreenState extends State<MainScreen> {
     ];
 
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -608,27 +737,27 @@ class _MainScreenState extends State<MainScreen> {
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         children: bloodTypes.map((blood) {
           return Padding(
-            padding: EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(vertical: 6),
             child: Row(
               children: [
                 SizedBox(
                   width: 24,
                   child: Text(
                     blood['type'] as String,
-                    style: TextStyle(
+                    style: GoogleFonts.quicksand(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
                   ),
                 ),
-                SizedBox(width: 16),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Container(
                     height: 20,
@@ -648,12 +777,12 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                   ),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 SizedBox(
                   width: 32,
                   child: Text(
                     '${blood['percentage']}',
-                    style: TextStyle(
+                    style: GoogleFonts.quicksand(
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
                     ),
@@ -672,7 +801,7 @@ class _MainScreenState extends State<MainScreen> {
       String title, String date, String tag, Color tagColor) {
     return Container(
       width: 280,
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -680,7 +809,7 @@ class _MainScreenState extends State<MainScreen> {
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -690,14 +819,14 @@ class _MainScreenState extends State<MainScreen> {
           Row(
             children: [
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: tagColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   tag,
-                  style: TextStyle(
+                  style: GoogleFonts.quicksand(
                     color: tagColor,
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
@@ -706,20 +835,20 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             title,
-            style: TextStyle(
+            style: GoogleFonts.quicksand(
               fontWeight: FontWeight.bold,
               fontSize: 14,
             ),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
             date,
-            style: TextStyle(
+            style: GoogleFonts.quicksand(
               fontSize: 12,
-              color: Colors.grey.shade600,
+              color: AppColors.paragraph,
             ),
           ),
         ],

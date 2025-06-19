@@ -15,8 +15,8 @@ class CustomBottomNavbar extends StatelessWidget {
   Widget build(BuildContext context) {
     // Menggunakan MediaQuery.of(context).padding.bottom untuk menyesuaikan dengan safe area
     final double bottomPadding = MediaQuery.of(context).padding.bottom;
-    final double navbarHeight = 60.0; // Tinggi dasar navbar
-    final double fabSize = 60.0; // Ukuran FAB
+    const double navbarHeight = 60.0; // Tinggi dasar navbar
+    const double fabSize = 60.0; // Ukuran FAB
 
     return Container(
       // Tinggi total navbar, termasuk padding bawah untuk safe area
@@ -27,7 +27,7 @@ class CustomBottomNavbar extends StatelessWidget {
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
             blurRadius: 10,
-            offset: Offset(0, -2),
+            offset: const Offset(0, -2),
           ),
         ],
       ),
@@ -72,7 +72,7 @@ class CustomBottomNavbar extends StatelessWidget {
                     BoxShadow(
                       color: Colors.red.shade200.withOpacity(0.5),
                       blurRadius: 8,
-                      offset: Offset(0, 2),
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),

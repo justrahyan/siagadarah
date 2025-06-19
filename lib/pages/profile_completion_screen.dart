@@ -69,8 +69,8 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       context: context,
       initialDate: DateTime(1995),
       firstDate: DateTime(1950),
-      lastDate:
-          DateTime.now().subtract(Duration(days: 365 * 17)), // Min 17 years old
+      lastDate: DateTime.now()
+          .subtract(const Duration(days: 365 * 17)), // Min 17 years old
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -123,7 +123,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
         if (success) {
           _showSnackBar('Profil berhasil dilengkapi!', isError: false);
 
-          await Future.delayed(Duration(milliseconds: 500));
+          await Future.delayed(const Duration(milliseconds: 500));
 
           Navigator.pushReplacement(
             context,
@@ -154,7 +154,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
         content: Text(message),
         backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
         behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.all(16),
+        margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
@@ -183,16 +183,16 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFDF2F2),
+      backgroundColor: const Color(0xFFFDF2F2),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: _currentPage > 0
             ? IconButton(
-                icon: Icon(Icons.arrow_back, color: Colors.black87),
+                icon: const Icon(Icons.arrow_back, color: Colors.black87),
                 onPressed: () {
                   _pageController.previousPage(
-                    duration: Duration(milliseconds: 300),
+                    duration: const Duration(milliseconds: 300),
                     curve: Curves.ease,
                   );
                 },
@@ -200,7 +200,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             : null,
         title: Text(
           'Lengkapi Profil (${_currentPage + 1}/3)',
-          style: TextStyle(
+          style: const TextStyle(
             color: Colors.black87,
             fontSize: 16,
             fontWeight: FontWeight.w500,
@@ -212,7 +212,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
         children: [
           // Progress indicator
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: LinearProgressIndicator(
               value: (_currentPage + 1) / 3,
               backgroundColor: Colors.grey.shade300,
@@ -238,7 +238,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
           // Bottom navigation
           Container(
-            padding: EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
             child: Row(
               children: [
                 if (_currentPage > 0)
@@ -246,7 +246,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     child: OutlinedButton(
                       onPressed: () {
                         _pageController.previousPage(
-                          duration: Duration(milliseconds: 300),
+                          duration: const Duration(milliseconds: 300),
                           curve: Curves.ease,
                         );
                       },
@@ -255,7 +255,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        padding: EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       child: Text(
                         'Sebelumnya',
@@ -266,7 +266,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                       ),
                     ),
                   ),
-                if (_currentPage > 0) SizedBox(width: 16),
+                if (_currentPage > 0) const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: _isLoading
@@ -275,7 +275,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                             if (_currentPage < 2) {
                               if (_isCurrentPageValid()) {
                                 _pageController.nextPage(
-                                  duration: Duration(milliseconds: 300),
+                                  duration: const Duration(milliseconds: 300),
                                   curve: Curves.ease,
                                 );
                               } else {
@@ -296,10 +296,10 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      padding: EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child: _isLoading
-                        ? SizedBox(
+                        ? const SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
@@ -310,7 +310,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                           )
                         : Text(
                             _currentPage < 2 ? 'Selanjutnya' : 'Selesai',
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
                             ),
@@ -327,11 +327,11 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
   Widget _buildPersonalInfoPage() {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Informasi Personal',
             style: TextStyle(
               fontSize: 24,
@@ -340,7 +340,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             ),
           ),
 
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
 
           Text(
             'Data ini diperlukan untuk verifikasi donor darah',
@@ -350,10 +350,10 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             ),
           ),
 
-          SizedBox(height: 32),
+          const SizedBox(height: 32),
 
           // Birthdate
-          Text(
+          const Text(
             'Tanggal Lahir',
             style: TextStyle(
               fontSize: 16,
@@ -361,7 +361,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               color: Colors.black87,
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -379,15 +379,15 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     Icon(Icons.calendar_today, color: Colors.grey.shade600),
                 border: InputBorder.none,
                 contentPadding:
-                    EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
             ),
           ),
 
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
 
           // Gender
-          Text(
+          const Text(
             'Jenis Kelamin',
             style: TextStyle(
               fontSize: 16,
@@ -395,14 +395,15 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               color: Colors.black87,
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
                 child: GestureDetector(
                   onTap: () => setState(() => _selectedGender = 'male'),
                   child: Container(
-                    padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16, horizontal: 12),
                     decoration: BoxDecoration(
                       color: _selectedGender == 'male'
                           ? Colors.red.shade50
@@ -423,7 +424,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                               ? Colors.red.shade400
                               : Colors.grey.shade600,
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Text(
                           'Laki-laki',
                           style: TextStyle(
@@ -438,12 +439,13 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                   ),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: GestureDetector(
                   onTap: () => setState(() => _selectedGender = 'female'),
                   child: Container(
-                    padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16, horizontal: 12),
                     decoration: BoxDecoration(
                       color: _selectedGender == 'female'
                           ? Colors.red.shade50
@@ -464,7 +466,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                               ? Colors.red.shade400
                               : Colors.grey.shade600,
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Text(
                           'Perempuan',
                           style: TextStyle(
@@ -482,7 +484,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             ],
           ),
 
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
 
           // Weight & Height
           Row(
@@ -491,7 +493,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Berat Badan (kg)',
                       style: TextStyle(
                         fontSize: 16,
@@ -499,7 +501,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                         color: Colors.black87,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -513,7 +515,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                           hintText: '50',
                           hintStyle: TextStyle(color: Colors.grey.shade500),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
+                          contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 16),
                         ),
                       ),
@@ -521,12 +523,12 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                   ],
                 ),
               ),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Tinggi Badan (cm)',
                       style: TextStyle(
                         fontSize: 16,
@@ -534,7 +536,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                         color: Colors.black87,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -548,7 +550,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                           hintText: '160',
                           hintStyle: TextStyle(color: Colors.grey.shade500),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
+                          contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 16),
                         ),
                       ),
@@ -565,11 +567,11 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
   Widget _buildBloodTypeOccupationPage() {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Golongan Darah & Pekerjaan',
             style: TextStyle(
               fontSize: 24,
@@ -578,7 +580,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             ),
           ),
 
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
 
           Text(
             'Informasi ini penting untuk mencocokkan donor',
@@ -588,10 +590,10 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             ),
           ),
 
-          SizedBox(height: 32),
+          const SizedBox(height: 32),
 
           // Blood Type
-          Text(
+          const Text(
             'Golongan Darah',
             style: TextStyle(
               fontSize: 16,
@@ -599,12 +601,12 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               color: Colors.black87,
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
 
           GridView.builder(
             shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 4,
               crossAxisSpacing: 8,
               mainAxisSpacing: 8,
@@ -642,10 +644,10 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             },
           ),
 
-          SizedBox(height: 32),
+          const SizedBox(height: 32),
 
           // Occupation
-          Text(
+          const Text(
             'Pekerjaan',
             style: TextStyle(
               fontSize: 16,
@@ -653,7 +655,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               color: Colors.black87,
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -667,15 +669,15 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 hintStyle: TextStyle(color: Colors.grey.shade500),
                 border: InputBorder.none,
                 contentPadding:
-                    EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
             ),
           ),
 
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
 
           Container(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.orange.shade50,
               borderRadius: BorderRadius.circular(8),
@@ -688,7 +690,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                   color: Colors.orange.shade600,
                   size: 20,
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Jika tidak yakin golongan darah, Anda bisa melakukan tes di laboratorium terdekat',
@@ -708,11 +710,11 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
   Widget _buildAddressPage() {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Alamat Lengkap',
             style: TextStyle(
               fontSize: 24,
@@ -721,7 +723,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             ),
           ),
 
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
 
           Text(
             'Alamat digunakan untuk mencocokkan dengan donor terdekat',
@@ -731,10 +733,10 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             ),
           ),
 
-          SizedBox(height: 32),
+          const SizedBox(height: 32),
 
           // Street
-          Text(
+          const Text(
             'Alamat Jalan',
             style: TextStyle(
               fontSize: 16,
@@ -742,7 +744,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               color: Colors.black87,
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -756,12 +758,12 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 hintStyle: TextStyle(color: Colors.grey.shade500),
                 border: InputBorder.none,
                 contentPadding:
-                    EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
             ),
           ),
 
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
 
           // City & District
           Row(
@@ -770,7 +772,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Kota/Kabupaten *',
                       style: TextStyle(
                         fontSize: 16,
@@ -778,7 +780,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                         color: Colors.black87,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -791,7 +793,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                           hintText: 'Semarang',
                           hintStyle: TextStyle(color: Colors.grey.shade500),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
+                          contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 16),
                         ),
                       ),
@@ -799,12 +801,12 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                   ],
                 ),
               ),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Kecamatan',
                       style: TextStyle(
                         fontSize: 16,
@@ -812,7 +814,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                         color: Colors.black87,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -825,7 +827,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                           hintText: 'Banyumanik',
                           hintStyle: TextStyle(color: Colors.grey.shade500),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
+                          contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 16),
                         ),
                       ),
@@ -836,7 +838,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             ],
           ),
 
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
 
           // Province & Postal Code
           Row(
@@ -845,7 +847,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Provinsi *',
                       style: TextStyle(
                         fontSize: 16,
@@ -853,7 +855,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                         color: Colors.black87,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -866,7 +868,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                           hintText: 'Jawa Tengah',
                           hintStyle: TextStyle(color: Colors.grey.shade500),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
+                          contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 16),
                         ),
                       ),
@@ -874,12 +876,12 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                   ],
                 ),
               ),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Kode Pos',
                       style: TextStyle(
                         fontSize: 16,
@@ -887,7 +889,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                         color: Colors.black87,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -901,7 +903,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                           hintText: '50263',
                           hintStyle: TextStyle(color: Colors.grey.shade500),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
+                          contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 16),
                         ),
                       ),
@@ -912,10 +914,10 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             ],
           ),
 
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
 
           Container(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.green.shade50,
               borderRadius: BorderRadius.circular(8),
@@ -928,7 +930,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                   color: Colors.green.shade600,
                   size: 20,
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Setelah melengkapi profil, Anda dapat mulai menggunakan fitur donor darah',

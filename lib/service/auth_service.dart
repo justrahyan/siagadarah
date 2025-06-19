@@ -52,7 +52,7 @@ class AuthService {
           'signInMethod': 'email',
           'isProfileComplete':
               false, // Akan jadi true setelah user melengkapi data
-
+          'role': 'user', // DEFAULT ROLE: user
           // ===== TEMPORARY FIELDS (Data yang belum diisi, akan diisi nanti) =====
           // Personal Details
           'dateOfBirth': '', // Format: YYYY-MM-DD
@@ -153,16 +153,18 @@ class AuthService {
   }
 
   // Sign in with Google - akan meminta phone number jika belum ada
-  Future<AuthResult> signInWithGoogle() async {
+  Future<AuthResult> signInWithGoogle({bool isRegister = false}) async {
     try {
       print('🔍 AuthService: Starting Google Sign-In');
-
+      // Delete login cache
+      await GoogleSignIn().signOut();
       // Trigger the authentication flow
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      print("🔥 googleUser: ${googleUser?.email}");
 
       if (googleUser == null) {
         return AuthResult(
-            success: false, message: 'Google sign in was cancelled');
+            success: false, message: 'Login dengan Google dibatalkan');
       }
 
       // Obtain the auth details from the request
@@ -174,6 +176,19 @@ class AuthService {
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
+
+      // 🔍 Cek apakah email Google sudah terdaftar
+      final methods = await _auth.fetchSignInMethodsForEmail(googleUser.email);
+      print('📡 Sign-in methods for ${googleUser.email}: $methods');
+
+      if (!isRegister && methods.contains('password')) {
+        // 💡 Sudah terdaftar pakai email/password
+        return AuthResult(
+          success: false,
+          message: 'email_exists_with_password',
+          user: null,
+        );
+      }
 
       // Once signed in, return the UserCredential
       UserCredential result = await _auth.signInWithCredential(credential);
@@ -202,8 +217,8 @@ class AuthService {
             'isVerified': user.emailVerified,
             'signInMethod': 'google',
             'isProfileComplete': false,
-            'needsPhoneNumber': true, // Flag untuk meminta phone number
-
+            'needsPhoneNumber': false,
+            'role': 'user', // DEFAULT ROLE: user
             // ===== TEMPORARY FIELDS (sama seperti email registration) =====
             'dateOfBirth': '',
             'gender': '',
@@ -276,6 +291,9 @@ class AuthService {
           };
 
           await _firestore.collection('users').doc(user.uid).set(userData);
+          if (!user.emailVerified) {
+            await user.sendEmailVerification();
+          }
         } else {
           print('🔄 AuthService: Updating existing Google user login');
           // Update last login time
@@ -288,8 +306,7 @@ class AuthService {
         return AuthResult(
             success: true, user: user, needsPhoneNumber: !userDoc.exists);
       } else {
-        return AuthResult(
-            success: false, message: 'Failed to sign in with Google');
+        return AuthResult(success: false, message: 'Gagal login dengan Google');
       }
     } catch (e) {
       print('💥 AuthService: Google Sign-In exception: $e');
@@ -298,24 +315,18 @@ class AuthService {
     }
   }
 
-  // Update phone number untuk Google users
-  Future<AuthResult> updatePhoneNumber({
-    required String userId,
-    required String phoneNumber,
-  }) async {
+  // New: Get user role
+  Future<String?> getUserRole(String uid) async {
     try {
-      await _firestore.collection('users').doc(userId).update({
-        'phone': phoneNumber,
-        'needsPhoneNumber': false,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      return AuthResult(
-          success: true, message: 'Phone number updated successfully');
+      DocumentSnapshot userDoc =
+          await _firestore.collection('users').doc(uid).get();
+      if (userDoc.exists && userDoc.data() != null) {
+        return (userDoc.data() as Map<String, dynamic>)['role'] as String?;
+      }
+      return null;
     } catch (e) {
-      print('Error updating phone number: $e');
-      return AuthResult(
-          success: false, message: 'Failed to update phone number');
+      print('Error getting user role: $e');
+      return null;
     }
   }
 
@@ -496,6 +507,14 @@ class AuthService {
     } catch (e) {
       return AuthResult(
           success: false, message: 'An unexpected error occurred');
+    }
+  }
+
+  // Email Verification
+  Future<void> sendEmailVerification() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && !user.emailVerified) {
+      await user.sendEmailVerification();
     }
   }
 

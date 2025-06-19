@@ -1,10 +1,19 @@
+import 'package:another_flushbar/flushbar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:siaga_darah/themes/colors.dart';
 import 'RegisterScreen.dart';
 import 'main_screen.dart';
-import 'phone_input_screen.dart';
 import '../service/auth_service.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class LoginScreen extends StatefulWidget {
+  final bool showSuccessMessage;
+  const LoginScreen({Key? key, this.showSuccessMessage = false})
+      : super(key: key);
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
@@ -21,6 +30,16 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.showSuccessMessage) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showSnackBar('Akun berhasil terdaftar!', isError: false);
+      });
+    }
   }
 
   Future<void> _handleLogin() async {
@@ -51,13 +70,30 @@ class _LoginScreenState extends State<LoginScreen> {
       print('🆔 User UID: ${result.user?.uid}');
 
       if (result.success && result.user != null) {
+        final user = FirebaseAuth.instance.currentUser;
+
+        if (user != null && !user.emailVerified) {
+          print('⚠️ Email belum diverifikasi');
+          await FirebaseAuth.instance.signOut(); // keluarin user
+          if (mounted) {
+            _showSnackBar(
+              'Email belum diverifikasi. Silakan cek email Anda.',
+              isError: true,
+            );
+          }
+          return;
+        }
+
         print('✅ Login successful, navigating to main screen');
         if (mounted) {
-          _showSnackBar('Login berhasil!', isError: false);
-          // Navigate to main screen
+          // _showSnackBar('Login berhasil!', isError: false);
+          await Future.delayed(Duration(milliseconds: 300));
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => MainScreen()),
+            MaterialPageRoute(
+                builder: (context) => MainScreen(
+                      showSuccessMessage: true,
+                    )),
           );
         }
       } else {
@@ -68,9 +104,22 @@ class _LoginScreenState extends State<LoginScreen> {
         print('🔄 Checking current user: ${currentUser?.email}');
 
         if (currentUser != null) {
+          if (!currentUser.emailVerified) {
+            print('⚠️ Email belum diverifikasi (alt check)');
+            await FirebaseAuth.instance.signOut();
+            if (mounted) {
+              _showSnackBar(
+                'Email belum diverifikasi. Silakan cek email Anda.',
+                isError: true,
+              );
+            }
+            return;
+          }
+
           print('🎯 User is actually signed in! Proceeding...');
           if (mounted) {
             _showSnackBar('Login berhasil!', isError: false);
+            await Future.delayed(Duration(milliseconds: 300));
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => MainScreen()),
@@ -103,37 +152,78 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       print('🔍 Starting Google Sign-In process...');
-      final result = await _authService.signInWithGoogle();
+      final result = await _authService.signInWithGoogle(isRegister: false);
 
       print('📊 Google Sign-In result: ${result.success}');
       print('💬 Message: ${result.message}');
       print('👤 User: ${result.user?.email}');
+
+      if (result.message == 'email_exists_with_password') {
+        final connect = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text("Email sudah digunakan"),
+            content: Text(
+                "Email ini sudah digunakan untuk login dengan email & password. Ingin tautkan dengan akun Google?"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text("Batal"),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text("Tautkan"),
+              ),
+            ],
+          ),
+        );
+
+        if (connect == true) {
+          final googleUser = await GoogleSignIn().signIn();
+          final googleAuth = await googleUser?.authentication;
+          final googleCredential = GoogleAuthProvider.credential(
+            accessToken: googleAuth?.accessToken,
+            idToken: googleAuth?.idToken,
+          );
+
+          final currentUser = FirebaseAuth.instance.currentUser;
+          if (currentUser != null) {
+            await currentUser.linkWithCredential(googleCredential);
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(currentUser.uid)
+                .update({
+              'signInMethods': FieldValue.arrayUnion(['google']),
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+            _showSnackBar('Berhasil menautkan akun Google!', isError: false);
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => MainScreen()),
+            );
+            return;
+          } else {
+            _showSnackBar(
+              'Harap login terlebih dahulu dengan email & password.',
+              isError: true,
+            );
+          }
+        } else {
+          _showSnackBar('Login Google dibatalkan', isError: true);
+          return;
+        }
+      }
 
       if (mounted) {
         if (result.success && result.user != null) {
           print('✅ Google Sign-In successful');
           _showSnackBar('Login berhasil!', isError: false);
 
-          // Small delay to ensure UI updates properly
-          await Future.delayed(Duration(milliseconds: 500));
-
-          // Check if user needs to input phone number
-          if (result.needsPhoneNumber) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PhoneInputScreen(
-                  userId: result.user!.uid,
-                  userName: result.user!.displayName ?? 'User',
-                ),
-              ),
-            );
-          } else {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => MainScreen()),
-            );
-          }
+          await Future.delayed(const Duration(milliseconds: 500));
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => MainScreen()),
+          );
         } else {
           print('❌ Google Sign-In failed: ${result.message}');
 
@@ -146,29 +236,15 @@ class _LoginScreenState extends State<LoginScreen> {
             print('🎯 User is actually signed in with Google! Proceeding...');
             _showSnackBar('Login berhasil!', isError: false);
 
-            await Future.delayed(Duration(milliseconds: 500));
+            await Future.delayed(const Duration(milliseconds: 500));
 
             // Check if user data exists and needs phone number
             final userData = await _authService.getUserData(currentUser.uid);
-            if (userData != null &&
-                (userData['needsPhoneNumber'] == true ||
-                    userData['phone'] == '' ||
-                    userData['phone'] == null)) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PhoneInputScreen(
-                    userId: currentUser.uid,
-                    userName: currentUser.displayName ?? 'User',
-                  ),
-                ),
-              );
-            } else {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => MainScreen()),
-              );
-            }
+
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => MainScreen()),
+            );
           } else {
             _showSnackBar(result.message ?? 'Google login gagal',
                 isError: true);
@@ -178,41 +254,6 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       print('💥 Exception during Google Sign-In: $e');
       print('🔍 Exception type: ${e.runtimeType}');
-
-      if (mounted) {
-        // Check if user is signed in despite the exception
-        final currentUser = _authService.currentUser;
-        if (currentUser != null) {
-          print('🎯 User signed in despite exception! Proceeding...');
-          _showSnackBar('Login berhasil!', isError: false);
-
-          await Future.delayed(Duration(milliseconds: 500));
-
-          // Check if user data exists and needs phone number
-          final userData = await _authService.getUserData(currentUser.uid);
-          if (userData != null &&
-              (userData['needsPhoneNumber'] == true ||
-                  userData['phone'] == '' ||
-                  userData['phone'] == null)) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PhoneInputScreen(
-                  userId: currentUser.uid,
-                  userName: currentUser.displayName ?? 'User',
-                ),
-              ),
-            );
-          } else {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => MainScreen()),
-            );
-          }
-        } else {
-          _showSnackBar('Terjadi kesalahan: ${e.toString()}', isError: true);
-        }
-      }
     } finally {
       if (mounted) {
         setState(() {
@@ -247,73 +288,97 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // void _showSnackBar(String message, {required bool isError}) {
+  //   if (!mounted) return;
+
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     SnackBar(
+  //       content: Text(message),
+  //       backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
+  //       behavior: SnackBarBehavior.floating,
+  //       margin: const EdgeInsets.all(16),
+  //       shape: RoundedRectangleBorder(
+  //         borderRadius: BorderRadius.circular(8),
+  //       ),
+  //       duration: Duration(seconds: isError ? 4 : 2),
+  //     ),
+  //   );
+  // }
+
   void _showSnackBar(String message, {required bool isError}) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
-        behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+    Flushbar(
+      messageText: Text(
+        message,
+        style: GoogleFonts.quicksand(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
         ),
-        duration: Duration(seconds: isError ? 4 : 2),
       ),
-    );
+      backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
+      margin: const EdgeInsets.all(16),
+      borderRadius: BorderRadius.circular(8),
+      duration: Duration(seconds: isError ? 4 : 2),
+      flushbarPosition: FlushbarPosition.TOP,
+      icon: Icon(
+        isError ? Icons.error : Icons.check_circle,
+        color: Colors.white,
+      ),
+    ).show(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFDF2F2), // Light pink background
+      backgroundColor: Colors.white, // Light pink background
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: 60),
+              const SizedBox(height: 60),
 
               // Title
               Center(
                 child: Text(
                   'Login',
-                  style: TextStyle(
-                    fontSize: 32,
+                  style: GoogleFonts.quicksand(
+                    fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: AppColors.darkText,
                   ),
                 ),
               ),
 
-              SizedBox(height: 8),
+              const SizedBox(height: 4),
 
               // Subtitle
               Center(
                 child: Text(
                   'Masuk untuk mulai menggunakan aplikasi.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
+                  style: GoogleFonts.quicksand(
+                    fontSize: 14,
+                    color: AppColors.paragraph,
                   ),
                 ),
               ),
 
-              SizedBox(height: 50),
+              const SizedBox(height: 24),
 
               // Email Field
               Text(
                 'Email',
-                style: TextStyle(
-                  fontSize: 16,
+                style: GoogleFonts.quicksand(
+                  fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Colors.black87,
+                  color: AppColors.darkText,
                 ),
               ),
 
-              SizedBox(height: 8),
+              const SizedBox(height: 6),
 
               Container(
                 decoration: BoxDecoration(
@@ -324,34 +389,39 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
+                  cursorColor: AppColors.primary,
+                  style: GoogleFonts.quicksand(
+                    color: AppColors.darkText,
+                    fontSize: 14,
+                  ),
                   decoration: InputDecoration(
-                    hintText: 'ival_p@gmail.com',
-                    hintStyle: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 16,
+                    hintText: 'Masukkan email anda',
+                    hintStyle: GoogleFonts.quicksand(
+                      color: AppColors.paragraph,
+                      fontSize: 14,
                     ),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 16,
+                      vertical: 12,
                     ),
                   ),
                 ),
               ),
 
-              SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // Password Field
               Text(
                 'Password',
-                style: TextStyle(
-                  fontSize: 16,
+                style: GoogleFonts.quicksand(
+                  fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Colors.black87,
+                  color: AppColors.darkText,
                 ),
               ),
 
-              SizedBox(height: 8),
+              const SizedBox(height: 6),
 
               Container(
                 decoration: BoxDecoration(
@@ -362,24 +432,29 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: TextFormField(
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
+                  cursorColor: AppColors.primary,
+                  style: GoogleFonts.quicksand(
+                    color: AppColors.darkText,
+                    fontSize: 14,
+                  ),
                   decoration: InputDecoration(
-                    hintText: '••••••••',
-                    hintStyle: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 20,
-                      letterSpacing: 2,
+                    hintText: 'Masukkan password anda',
+                    hintStyle: GoogleFonts.quicksand(
+                      color: AppColors.paragraph,
+                      fontSize: 14,
                     ),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 16,
+                      vertical: 12,
                     ),
                     suffixIcon: IconButton(
+                      iconSize: 18,
                       icon: Icon(
                         _isPasswordVisible
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: Colors.grey.shade600,
+                        color: AppColors.paragraph,
                       ),
                       onPressed: () {
                         setState(() {
@@ -391,7 +466,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              SizedBox(height: 16),
+              const SizedBox(height: 4),
 
               // Forgot Password
               Align(
@@ -400,32 +475,34 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: _handleForgotPassword,
                   child: Text(
                     'Lupa Password?',
-                    style: TextStyle(
-                      color: Colors.red.shade400,
+                    style: GoogleFonts.quicksand(
+                      color: AppColors.primary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
+                      decoration: TextDecoration.underline,
+                      decorationColor: AppColors.primary,
                     ),
                   ),
                 ),
               ),
 
-              SizedBox(height: 40),
+              const SizedBox(height: 14),
 
               // Login Button
               SizedBox(
                 width: double.infinity,
-                height: 52,
+                height: 48,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade400,
+                    backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                     elevation: 0,
                   ),
                   child: _isLoading
-                      ? SizedBox(
+                      ? const SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
@@ -436,8 +513,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         )
                       : Text(
                           'Login',
-                          style: TextStyle(
-                            fontSize: 16,
+                          style: GoogleFonts.quicksand(
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
@@ -445,7 +522,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // Or divider
               Row(
@@ -457,12 +534,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
                       'Atau',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
+                      style: GoogleFonts.quicksand(
+                        color: AppColors.paragraph,
+                        fontSize: 12,
                       ),
                     ),
                   ),
@@ -475,7 +552,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
 
-              SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // Google Login Button
               SizedBox(
@@ -493,32 +570,24 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Simple Google Icon
                       Container(
                         width: 20,
                         height: 20,
                         decoration: BoxDecoration(
-                          color: Colors.red.shade400,
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Center(
-                          child: Text(
-                            'G',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
+                        child: Image.asset(
+                          'assets/images/logo_google.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       Text(
                         'Login dengan Google',
-                        style: TextStyle(
-                          fontSize: 16,
+                        style: GoogleFonts.quicksand(
+                          fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: Colors.black87,
+                          color: AppColors.darkText,
                         ),
                       ),
                     ],
@@ -526,7 +595,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              SizedBox(height: 40),
+              const SizedBox(height: 20),
 
               // Register link
               Center(
@@ -535,8 +604,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     Text(
                       'Belum punya akun? ',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
+                      style: GoogleFonts.quicksand(
+                        color: AppColors.paragraph,
                         fontSize: 14,
                       ),
                     ),
@@ -551,10 +620,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                       child: Text(
                         'Daftar',
-                        style: TextStyle(
-                          color: Colors.red.shade400,
+                        style: GoogleFonts.quicksand(
+                          color: AppColors.primary,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                          decorationColor: AppColors.primary,
                         ),
                       ),
                     ),
@@ -562,7 +633,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              SizedBox(height: 40),
+              const SizedBox(height: 20),
             ],
           ),
         ),
