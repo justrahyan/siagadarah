@@ -2,10 +2,11 @@ import 'package:another_flushbar/flushbar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:siaga_darah/pages/ProfileScreen.dart';
+import 'package:siaga_darah/pages/informasi_screen.dart';
 import '../service/auth_service.dart';
 import '../widgets/custom_bottom_navbar.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:siaga_darah/themes/theme.dart';
+import 'package:siaga_darah/themes/colors.dart';
 
 class MainScreen extends StatefulWidget {
   final bool showSuccessMessage;
@@ -22,7 +23,6 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   final AuthService _authService = AuthService();
-  final bool _isLoggingOut = false;
   int _currentIndex = 0;
 
   // User data variables
@@ -35,6 +35,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+
     if (widget.showSuccessMessage) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showSnackBar(widget.successMessage, isError: false);
@@ -83,29 +84,34 @@ class _MainScreenState extends State<MainScreen> {
           });
         }
       } catch (e) {
-        print('Error loading user data: $e');
         if (mounted) {
           setState(() {
             _isLoading = false;
           });
+          _showSnackBar('Gagal memuat data pengguna.', isError: true);
         }
       }
     } else {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   void _onNavbarTap(int index) {
     if (index == 2) {
-      // Butuh Darah
+      // FAB "Butuh Darah" - navigasi ke halaman RequestBloodScreen
+      // Untuk sementara menampilkan snackbar, nanti bisa diganti dengan navigasi
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Fitur Butuh Darah akan segera hadir!'),
           backgroundColor: AppColors.primary,
         ),
       );
+      // Uncomment baris di bawah jika RequestBloodScreen sudah tersedia:
+      // Navigator.push(context, MaterialPageRoute(builder: (context) => RequestBloodScreen()));
       return;
     }
 
@@ -114,25 +120,31 @@ class _MainScreenState extends State<MainScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const ProfileScreen()),
-      );
+      ).then((_) {
+        // Muat ulang data pengguna ketika kembali dari ProfileScreen
+        _loadUserData();
+      });
       return;
     }
 
+    // Untuk index 0 (Beranda), 1 (Informasi), dan 3 (Riwayat)
     setState(() {
       _currentIndex = index;
     });
+  }
 
-    switch (index) {
+  // Method untuk mendapatkan widget yang akan ditampilkan berdasarkan index
+  Widget _getCurrentPage() {
+    switch (_currentIndex) {
+      case 0:
+        return _buildMainContent(); // Halaman Beranda
       case 1:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Halaman Donor akan segera hadir!')),
-        );
-        break;
+        return const InformasiScreen(); // Halaman Informasi
       case 3:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Halaman Riwayat akan segera hadir!')),
-        );
-        break;
+        return _buildPlaceholderPage(
+            'Riwayat Donasi', Icons.history); // Halaman Riwayat
+      default:
+        return _buildMainContent(); // Default ke Beranda
     }
   }
 
@@ -143,45 +155,37 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   // Logic Mode Siaga
-  // bool _isSiagaActive = snapshot['isDonor'] ?? false;
   void _onToggleSiaga(bool newValue) async {
     final user = _authService.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      _showSnackBar('Anda harus login untuk mengaktifkan Mode Siaga.',
+          isError: true);
+      return;
+    }
 
     try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({'isDonor': newValue});
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update(
+          {'isDonor': newValue, 'updatedAt': FieldValue.serverTimestamp()});
 
-      setState(() {
-        _isSiagaActive = newValue;
-      });
-
-      Flushbar(
-        message: newValue
-            ? 'Mode Siaga telah diaktifkan. Terima kasih telah siap membantu!'
-            : 'Mode Siaga dinonaktifkan.',
-        backgroundColor: Colors.green.shade700,
-        margin: const EdgeInsets.all(12),
-        borderRadius: BorderRadius.circular(8),
-        duration: const Duration(seconds: 2),
-        flushbarPosition: FlushbarPosition.TOP,
-        icon: const Icon(Icons.check_circle, color: Colors.white),
-      ).show(context);
+      if (mounted) {
+        setState(() {
+          _isSiagaActive = newValue;
+        });
+        _showSnackBar(
+          newValue
+              ? 'Mode Siaga telah diaktifkan. Terima kasih telah siap membantu!'
+              : 'Mode Siaga dinonaktifkan.',
+          isError: false,
+        );
+      }
     } catch (e) {
-      Flushbar(
-        message: 'Gagal memperbarui status Mode Siaga',
-        backgroundColor: Colors.red.shade700,
-        margin: const EdgeInsets.all(12),
-        borderRadius: BorderRadius.circular(8),
-        duration: const Duration(seconds: 2),
-        flushbarPosition: FlushbarPosition.TOP,
-        icon: const Icon(Icons.error, color: Colors.white),
-      ).show(context);
+      if (mounted) {
+        _showSnackBar('Gagal memperbarui status Mode Siaga.', isError: true);
+      }
     }
   }
 
+  // Konten untuk halaman Beranda (saat _currentIndex == 0)
   Widget _buildMainContent() {
     if (_isLoading) {
       return const Center(
@@ -212,7 +216,7 @@ class _MainScreenState extends State<MainScreen> {
                   left: 16, top: 32, right: 16, bottom: 16),
               child: Column(
                 children: [
-                  // Top bar with greeting and logout
+                  // Top bar with greeting and notification icon
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -296,41 +300,43 @@ class _MainScreenState extends State<MainScreen> {
                           ],
                         ),
                       ),
-                      Stack(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFD02B33),
-                              borderRadius: BorderRadius.circular(8),
+                      GestureDetector(
+                        onTap: () {
+                          // Aksi ketika notification ditekan
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content:
+                                  Text('Fitur notifikasi akan segera hadir!'),
                             ),
-                            child: Center(
-                              child: Image.asset(
-                                'assets/images/icon/notifikasi.png',
-                                width: 24,
-                                height: 24,
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            right: 2,
-                            top: 2,
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              constraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
-                              ),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFFF0000),
-                                shape: BoxShape.circle,
+                          );
+                        },
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFD02B33),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: Center(
+                                child: Image.asset(
+                                  'assets/images/icon/notifikasi.png',
+                                  width: 24,
+                                  height: 24,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                            const Positioned(
+                              right: 2,
+                              top: 2,
+                              child: CircleAvatar(
+                                radius: 8,
+                                backgroundColor: Color(0xFFFF0000),
                                 child: Text(
-                                  '3', // Dummy jumlah notifikasi
-                                  style: GoogleFonts.quicksand(
+                                  '3',
+                                  style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
@@ -338,8 +344,8 @@ class _MainScreenState extends State<MainScreen> {
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -383,7 +389,7 @@ class _MainScreenState extends State<MainScreen> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'B+',
+                                    _userBloodType,
                                     style: GoogleFonts.quicksand(
                                       fontSize: 32,
                                       fontWeight: FontWeight.w600,
@@ -426,7 +432,7 @@ class _MainScreenState extends State<MainScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Golongan Darahmu,',
+                                'Jumlah Donasi,',
                                 style: GoogleFonts.quicksand(
                                   fontSize: 12,
                                   color: AppColors.darkBlue,
@@ -440,7 +446,7 @@ class _MainScreenState extends State<MainScreen> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    '6',
+                                    '$_donationCount',
                                     style: GoogleFonts.quicksand(
                                       fontSize: 32,
                                       fontWeight: FontWeight.w600,
@@ -469,56 +475,57 @@ class _MainScreenState extends State<MainScreen> {
 
           const SizedBox(height: 24),
 
-          // Mode Siaga
+          // Mode Siaga Section
           Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding:
-                  const EdgeInsets.only(left: 4, top: 16, right: 4, bottom: 16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.orange.shade300, Colors.orange.shade400],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.circular(10),
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding:
+                const EdgeInsets.only(left: 4, top: 16, right: 4, bottom: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.orange.shade300, Colors.orange.shade400],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Mode Siaga Aktif!',
-                          style: GoogleFonts.quicksand(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Mode Siaga Aktif!',
+                        style: GoogleFonts.quicksand(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
                         ),
-                        Text(
-                          'Hidupkan Mode Siaga & Jadi Penolong Sesama',
-                          style: GoogleFonts.quicksand(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
+                      ),
+                      Text(
+                        'Hidupkan Mode Siaga & Jadi Penolong Sesama',
+                        style: GoogleFonts.quicksand(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  Switch(
-                    value: _isSiagaActive,
-                    onChanged: _onToggleSiaga,
-                    activeColor: Colors.white,
-                    activeTrackColor: Colors.red.shade400,
-                    inactiveThumbColor: Colors.grey.shade300,
-                    inactiveTrackColor: Colors.grey.shade500,
-                  ),
-                ],
-              )),
+                ),
+                Switch(
+                  value: _isSiagaActive,
+                  onChanged: _onToggleSiaga,
+                  activeColor: Colors.white,
+                  activeTrackColor: Colors.red.shade400,
+                  inactiveThumbColor: Colors.grey.shade300,
+                  inactiveTrackColor: Colors.grey.shade500,
+                ),
+              ],
+            ),
+          ),
 
           const SizedBox(height: 24),
 
@@ -530,7 +537,8 @@ class _MainScreenState extends State<MainScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.bloodtype, color: AppColors.primary, size: 20),
+                    const Icon(Icons.bloodtype,
+                        color: AppColors.primary, size: 20),
                     const SizedBox(width: 4),
                     Text(
                       'Stok Darah PMI Makassar',
@@ -632,7 +640,7 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ),
 
-          // Bottom padding for navbar
+          // Bottom padding untuk navbar
           const SizedBox(height: 100),
         ],
       ),
@@ -663,8 +671,7 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: SafeArea(
-        child:
-            _currentIndex == 0 ? _buildMainContent() : _buildPlaceholderPage(),
+        child: _getCurrentPage(), // Menggunakan method yang diperbaiki
       ),
       bottomNavigationBar: CustomBottomNavbar(
         currentIndex: _currentIndex,
@@ -673,34 +680,20 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildPlaceholderPage() {
-    String pageTitle = '';
-    switch (_currentIndex) {
-      case 1:
-        pageTitle = 'Halaman Donor';
-        break;
-      case 3:
-        pageTitle = 'Halaman Riwayat';
-        break;
-      case 4:
-        pageTitle = 'Halaman Profil';
-        break;
-      default:
-        pageTitle = 'Halaman';
-    }
-
+  // Widget placeholder untuk halaman yang belum diimplementasikan
+  Widget _buildPlaceholderPage(String title, IconData icon) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.construction,
+            icon,
             size: 80,
             color: Colors.grey.shade400,
           ),
           const SizedBox(height: 20),
           Text(
-            pageTitle,
+            title,
             style: GoogleFonts.quicksand(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -781,7 +774,7 @@ class _MainScreenState extends State<MainScreen> {
                 SizedBox(
                   width: 32,
                   child: Text(
-                    '${blood['percentage']}',
+                    '${blood['percentage']}%',
                     style: GoogleFonts.quicksand(
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
@@ -799,59 +792,71 @@ class _MainScreenState extends State<MainScreen> {
 
   Widget _buildEventCard(
       String title, String date, String tag, Color tagColor) {
-    return Container(
-      width: 280,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+    return GestureDetector(
+      onTap: () {
+        // Aksi ketika event card ditekan
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Membuka detail event: $title'),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: tagColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  tag,
-                  style: GoogleFonts.quicksand(
-                    color: tagColor,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
+        );
+        // Nanti bisa diganti dengan navigasi ke halaman detail event
+      },
+      child: Container(
+        width: 280,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: tagColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    tag,
+                    style: GoogleFonts.quicksand(
+                      color: tagColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: GoogleFonts.quicksand(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: GoogleFonts.quicksand(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            date,
-            style: GoogleFonts.quicksand(
-              fontSize: 12,
-              color: AppColors.paragraph,
+            const SizedBox(height: 4),
+            Text(
+              date,
+              style: GoogleFonts.quicksand(
+                fontSize: 12,
+                color: AppColors.paragraph,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

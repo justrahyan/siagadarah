@@ -1,5 +1,8 @@
-// lib/widgets/custom_bottom_navbar.dart
+// File: lib/widgets/custom_bottom_navbar.dart
+
 import 'package:flutter/material.dart';
+// Asumsikan AppColors ada di sini atau diimpor dari tempat lain
+import 'package:siaga_darah/themes/colors.dart'; // Pastikan path ini benar
 
 class CustomBottomNavbar extends StatelessWidget {
   final int currentIndex;
@@ -13,13 +16,11 @@ class CustomBottomNavbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Menggunakan MediaQuery.of(context).padding.bottom untuk menyesuaikan dengan safe area
     final double bottomPadding = MediaQuery.of(context).padding.bottom;
-    const double navbarHeight = 60.0; // Tinggi dasar navbar
-    const double fabSize = 60.0; // Ukuran FAB
+    const double navbarHeight = 60.0;
+    const double fabSize = 60.0;
 
     return Container(
-      // Tinggi total navbar, termasuk padding bawah untuk safe area
       height: navbarHeight + bottomPadding,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -32,34 +33,26 @@ class CustomBottomNavbar extends StatelessWidget {
         ],
       ),
       child: Stack(
-        // Penting: Memungkinkan widget anak melampaui batas Stack
         clipBehavior: Clip.none,
         children: [
-          // Row untuk item navigasi utama
           Padding(
-            padding: EdgeInsets.only(
-                bottom: bottomPadding), // Padding bawah untuk safe area
+            padding: EdgeInsets.only(bottom: bottomPadding),
             child: Row(
               children: [
                 _buildNavItem(0, Icons.home_outlined, "Beranda"),
-                _buildNavItem(1, Icons.favorite_outline, "Donor"),
-                // Placeholder untuk FAB di tengah
-                const SizedBox(
-                    width:
-                        fabSize + 20), // Memberikan ruang lebih dari ukuran FAB
+                // Mengubah item "Donor" menjadi "Informasi" dengan ikon yang sesuai
+                _buildNavItem(
+                    1, Icons.info_outline, "Informasi"), // Ikon untuk informasi
+                const SizedBox(width: fabSize + 20),
                 _buildNavItem(3, Icons.history, "Riwayat"),
-                _buildNavItem(4, Icons.person_outline, "Profile"),
+                _buildNavItem(
+                    4, Icons.person_outline, "Profil"), // Teks "Profil"
               ],
             ),
           ),
-
-          // Floating Action Button (FAB)
           Positioned(
-            // Posisikan FAB sedikit di atas navbar
-            top: -(fabSize / 2 +
-                10), // -30 (half FAB size) - 10 (extra lift) = -40
-            left: MediaQuery.of(context).size.width / 2 -
-                (fabSize / 2), // Pusatkan FAB
+            top: -(fabSize / 2 + 10),
+            left: MediaQuery.of(context).size.width / 2 - (fabSize / 2),
             child: GestureDetector(
               onTap: () => onTap(2), // Index 2 untuk aksi FAB "Butuh Darah"
               child: Container(
@@ -91,8 +84,7 @@ class CustomBottomNavbar extends StatelessWidget {
                         color: Colors.white,
                         fontSize: 8,
                         fontWeight: FontWeight.w600,
-                        height:
-                            0.9, // Mengurangi tinggi baris untuk teks 2 baris
+                        height: 0.9,
                       ),
                     ),
                   ],
@@ -117,8 +109,6 @@ class CustomBottomNavbar extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () => onTap(index),
-          // splashFactory: NoSplash.splashFactory, // Uncomment jika tidak ingin efek splash
-          // highlightColor: Colors.transparent, // Uncomment jika tidak ingin efek highlight
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             child: Column(
@@ -133,7 +123,7 @@ class CustomBottomNavbar extends StatelessWidget {
                   label,
                   style: TextStyle(
                     color: iconColor,
-                    fontSize: 12, // Ukuran font yang sedikit lebih besar
+                    fontSize: 12,
                     fontWeight: fontWeight,
                   ),
                 ),
