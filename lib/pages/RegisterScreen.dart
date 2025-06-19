@@ -112,7 +112,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           await _authService.sendEmailVerification();
 
           print('✅ Registration successful');
-          // _showSnackBar('Registrasi berhasil!', isError: false);
+          // _showSnackBar('Akun berhasil terdaftar! Silakan verifikasi akun melalui link yang dikirim ke email Anda (cek folder spam jika tidak menemukan emailnya).', isError: false);
 
           // Small delay to ensure UI updates properly
           await Future.delayed(const Duration(milliseconds: 300));
@@ -134,7 +134,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
           if (currentUser != null) {
             print('🎯 User is actually registered! Proceeding...');
-            _showSnackBar('Registrasi berhasil!', isError: false);
+            _showSnackBar(
+                'Akun berhasil terdaftar! Silakan verifikasi akun melalui link yang dikirim ke email Anda (cek folder spam jika tidak menemukan emailnya).',
+                isError: false);
 
             await Future.delayed(const Duration(milliseconds: 500));
 
@@ -156,7 +158,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         final currentUser = _authService.currentUser;
         if (currentUser != null) {
           print('🎯 User registered despite exception! Proceeding...');
-          _showSnackBar('Registrasi berhasil!', isError: false);
+          _showSnackBar(
+              'Akun berhasil terdaftar! Silakan verifikasi akun melalui link yang dikirim ke email Anda (cek folder spam jika tidak menemukan emailnya).',
+              isError: false);
 
           await Future.delayed(const Duration(milliseconds: 500));
 
@@ -189,14 +193,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       print('👤 User: ${result.user?.email}');
 
       if (result.success && result.user != null) {
-        _showSnackBar("Registrasi berhasil!", isError: false);
+        _showSnackBar(
+            "Akun berhasil terdaftar! Silakan verifikasi akun melalui link yang dikirim ke email Anda (cek folder spam jika tidak menemukan emailnya).",
+            isError: false);
         await Future.delayed(const Duration(milliseconds: 500));
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
               builder: (_) => const MainScreen(
                     showSuccessMessage: true,
-                    successMessage: 'Registrasi berhasil! Silahkan verifikasi email Anda.',
+                    successMessage:
+                        'Akun berhasil terdaftar! Silakan verifikasi akun melalui link yang dikirim ke email Anda (cek folder spam jika tidak menemukan emailnya). Silahkan verifikasi email Anda.',
                   )),
         );
       } else {
@@ -485,6 +492,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         style: GoogleFonts.quicksand(
                           fontSize: 12, // Reduced from 14
                           color: AppColors.paragraph,
+                          fontWeight: FontWeight.w500,
                         ),
                         children: [
                           const TextSpan(text: 'Saya setuju dengan '),
@@ -492,6 +500,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             text: 'Kebijakan Privasi',
                             style: GoogleFonts.quicksand(
                               color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
                               decoration: TextDecoration.underline,
                             ),
                           ),
@@ -500,6 +509,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             text: 'Syarat & Ketentuan',
                             style: GoogleFonts.quicksand(
                               color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
                               decoration: TextDecoration.underline,
                             ),
                           ),
@@ -523,10 +533,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     backgroundColor: (_agreeToTerms)
                         ? AppColors.primary
                         : Colors.grey.shade300,
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    elevation: 0,
+                  ).copyWith(
+                    overlayColor: (_agreeToTerms)
+                        ? MaterialStateProperty.all(const Color(0xFFB83238))
+                        : null,
                   ),
                   child: _isLoading
                       ? const SizedBox(
@@ -593,6 +608,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     backgroundColor: Colors.white,
+                  ).copyWith(
+                    overlayColor: MaterialStateProperty.all(
+                      Colors.grey.withOpacity(0.1), // efek tekan abu-abu
+                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,

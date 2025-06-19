@@ -388,12 +388,21 @@ class _MainScreenState extends State<MainScreen> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    _userBloodType,
-                                    style: GoogleFonts.quicksand(
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.primary,
+                                  Flexible(
+                                    child: Text(
+                                      _userBloodType != null &&
+                                              _userBloodType!.isNotEmpty
+                                          ? _userBloodType!
+                                          : 'Belum diatur',
+                                      style: GoogleFonts.quicksand(
+                                        fontSize: _userBloodType != null &&
+                                                _userBloodType!.isNotEmpty
+                                            ? 32
+                                            : 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.primary,
+                                      ),
+                                      softWrap: true,
                                     ),
                                   ),
                                   const SizedBox(width: 8),

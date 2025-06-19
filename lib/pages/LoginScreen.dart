@@ -6,8 +6,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:siaga_darah/themes/colors.dart';
 import 'RegisterScreen.dart';
 import 'main_screen.dart';
-import '../dashboard/admin_main.dart'; 
-import '../service/auth_service.dart'; 
+import '../dashboard/admin_main.dart';
+import '../service/auth_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -38,7 +38,9 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     if (widget.showSuccessMessage) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showSnackBar('Akun berhasil terdaftar!', isError: false);
+        _showSnackBar(
+            'Akun berhasil terdaftar! Silakan verifikasi akun melalui link yang dikirim ke email Anda (cek folder spam jika tidak menemukan emailnya).',
+            isError: false);
       });
     }
   }
@@ -46,24 +48,24 @@ class _LoginScreenState extends State<LoginScreen> {
   /// Navigasi pengguna berdasarkan peran mereka.
   Future<void> _navigateBasedOnRole(User user) async {
     try {
-      DocumentSnapshot userDoc =
-          await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
 
       if (!userDoc.exists) {
         if (mounted) {
-          _showSnackBar('Data pengguna tidak ditemukan. Mohon coba lagi atau daftar ulang.', isError: true);
-          await FirebaseAuth.instance.signOut(); // Logout pengguna yang tidak lengkap
+          _showSnackBar(
+              'Data pengguna tidak ditemukan. Mohon coba lagi atau daftar ulang.',
+              isError: true);
+          await FirebaseAuth.instance
+              .signOut(); // Logout pengguna yang tidak lengkap
           return;
         }
       }
 
       Map<String, dynamic>? userData = userDoc.data() as Map<String, dynamic>?;
       String? userRole = userData?['role'] as String?;
-
-      // Perbarui timestamp lastLogin
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-        'lastLogin': FieldValue.serverTimestamp(),
-      });
 
       if (mounted) {
         if (userRole == 'admin') {
@@ -82,10 +84,19 @@ class _LoginScreenState extends State<LoginScreen> {
             (Route<dynamic> route) => false,
           );
         }
+        // Perbarui timestamp lastLogin
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({
+          'lastLogin': FieldValue.serverTimestamp(),
+        });
       }
     } catch (e) {
       if (mounted) {
-        _showSnackBar('Terjadi kesalahan saat mengecek peran. Melanjutkan sebagai pengguna biasa.', isError: true);
+        _showSnackBar(
+            'Terjadi kesalahan saat mengecek peran. Melanjutkan sebagai pengguna biasa.',
+            isError: true);
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const MainScreen()),
           (Route<dynamic> route) => false,
@@ -95,7 +106,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    if (_emailController.text.trim().isEmpty || _passwordController.text.isEmpty) {
+    if (_emailController.text.trim().isEmpty ||
+        _passwordController.text.isEmpty) {
       _showSnackBar('Mohon isi email dan password.', isError: true);
       return;
     }
@@ -114,7 +126,8 @@ class _LoginScreenState extends State<LoginScreen> {
         final user = FirebaseAuth.instance.currentUser;
 
         if (user != null && !user.emailVerified) {
-          await FirebaseAuth.instance.signOut(); // Logout pengguna yang belum terverifikasi
+          await FirebaseAuth.instance
+              .signOut(); // Logout pengguna yang belum terverifikasi
           if (mounted) {
             _showSnackBar(
               'Email belum diverifikasi. Silakan cek email Anda. Apabila tidak ada di inbox, cek folder spam.',
@@ -182,83 +195,15 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final result = await _authService.signInWithGoogle(isRegister: false);
 
-      if (result.message == 'email_exists_with_password') {
-        final connect = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text("Email sudah digunakan"),
-            content: const Text(
-                "Email ini sudah digunakan untuk login dengan email & password. Ingin tautkan dengan akun Google?"),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text("Batal"),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text("Tautkan"),
-              ),
-            ],
-          ),
+      if (result.success && result.user != null) {
+        _showSnackBar('Login berhasil!', isError: false);
+        await Future.delayed(const Duration(milliseconds: 500));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => MainScreen()),
         );
-
-        if (connect == true) {
-          final googleUser = await GoogleSignIn().signIn();
-          final googleAuth = await googleUser?.authentication;
-          final googleCredential = GoogleAuthProvider.credential(
-            accessToken: googleAuth?.accessToken,
-            idToken: googleAuth?.idToken,
-          );
-
-          final currentUser = FirebaseAuth.instance.currentUser;
-          if (currentUser != null) {
-            await currentUser.linkWithCredential(googleCredential);
-            await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).update({
-              'signInMethods': FieldValue.arrayUnion(['google']),
-              'updatedAt': FieldValue.serverTimestamp(),
-            });
-
-            if (mounted) {
-              _showSnackBar('Akun Google berhasil ditautkan!', isError: false);
-              await _navigateBasedOnRole(currentUser);
-            }
-            return;
-          } else {
-            if (mounted) {
-              _showSnackBar('Harap login terlebih dahulu dengan email & password untuk menautkan akun.', isError: true);
-            }
-          }
-        } else {
-          if (mounted) {
-            _showSnackBar('Login Google dibatalkan.', isError: true);
-          }
-          return;
-        }
-      }
-
-      if (mounted) {
-        if (result.success && result.user != null) {
-          await _navigateBasedOnRole(result.user!);
-        } else {
-          final currentUser = _authService.currentUser;
-          if (currentUser != null) {
-            await _navigateBasedOnRole(currentUser);
-          } else {
-            _showSnackBar(result.message ?? 'Login Google gagal.', isError: true);
-          }
-        }
-      }
-    } on FirebaseAuthException catch (e) {
-      String errorMessage;
-      if (e.code == 'account-exists-with-different-credential') {
-        errorMessage = 'Akun dengan email ini sudah ada dengan metode login berbeda.';
-      } else if (e.code == 'popup-closed-by-user') {
-        errorMessage = 'Login Google dibatalkan oleh pengguna.';
       } else {
-        errorMessage = e.message ?? 'Terjadi kesalahan saat login Google.';
-      }
-      if (mounted) {
-        _showSnackBar(errorMessage, isError: true);
+        _showSnackBar(result.message ?? 'Login Google gagal.', isError: true);
       }
     } catch (e) {
       if (mounted) {
@@ -280,12 +225,15 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     try {
-      final result = await _authService.resetPassword(_emailController.text.trim());
+      final result =
+          await _authService.resetPassword(_emailController.text.trim());
       if (mounted) {
         if (result.success) {
-          _showSnackBar('Link reset password telah dikirim ke email Anda.', isError: false);
+          _showSnackBar('Link reset password telah dikirim ke email Anda.',
+              isError: false);
         } else {
-          _showSnackBar(result.message ?? 'Gagal mengirim email reset.', isError: true);
+          _showSnackBar(result.message ?? 'Gagal mengirim email reset.',
+              isError: true);
         }
       }
     } on FirebaseAuthException catch (e) {
@@ -498,10 +446,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: _isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    elevation: 0,
+                  ).copyWith(
+                    overlayColor: MaterialStateProperty.all(
+                      const Color(0xFFB83238),
+                    ),
                   ),
                   child: _isLoading
                       ? const SizedBox(
@@ -568,6 +521,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     backgroundColor: Colors.white,
+                  ).copyWith(
+                    overlayColor: MaterialStateProperty.all(
+                      Colors.grey.withOpacity(0.1), // efek tekan abu-abu
+                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -585,7 +542,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         'Login dengan Google',
                         style: GoogleFonts.quicksand(
                           fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                           color: AppColors.darkText,
                         ),
                       ),
@@ -612,7 +569,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                          MaterialPageRoute(
+                              builder: (context) => const RegisterScreen()),
                         );
                       },
                       child: Text(
