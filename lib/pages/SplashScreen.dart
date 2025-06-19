@@ -121,7 +121,7 @@ class _SplashScreenState extends State<SplashScreen>
         context,
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
-              OnboardingScreen(),
+              const OnboardingScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
@@ -201,7 +201,7 @@ class _SplashScreenState extends State<SplashScreen>
                 builder: (context, child) {
                   return Opacity(
                     opacity: _textFadeAnimation.value * 0.7,
-                    child: Text(
+                    child: const Text(
                       'Donor Darah Digital',
                       style: TextStyle(
                         fontSize: 20,

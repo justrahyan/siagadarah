@@ -69,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (userRole == 'admin') {
           _showSnackBar('Selamat datang Admin!', isError: false);
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => AdminDashboard()),
+            MaterialPageRoute(builder: (context) => const AdminDashboard()),
             (Route<dynamic> route) => false,
           );
         } else {
