@@ -22,7 +22,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   final AuthService _authService = AuthService();
-  bool _isLoggingOut = false;
+  final bool _isLoggingOut = false;
   int _currentIndex = 0;
 
   // User data variables
@@ -101,8 +101,8 @@ class _MainScreenState extends State<MainScreen> {
     if (index == 2) {
       // Butuh Darah
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Fitur Butuh Darah akan segera hadir!'),
+        const SnackBar(
+          content: Text('Fitur Butuh Darah akan segera hadir!'),
           backgroundColor: AppColors.primary,
         ),
       );
@@ -184,7 +184,7 @@ class _MainScreenState extends State<MainScreen> {
 
   Widget _buildMainContent() {
     if (_isLoading) {
-      return Center(
+      return const Center(
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
         ),
@@ -530,7 +530,7 @@ class _MainScreenState extends State<MainScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.bloodtype, color: AppColors.primary, size: 20),
+                    const Icon(Icons.bloodtype, color: AppColors.primary, size: 20),
                     const SizedBox(width: 4),
                     Text(
                       'Stok Darah PMI Makassar',

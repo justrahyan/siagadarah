@@ -69,8 +69,8 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       context: context,
       initialDate: DateTime(1995),
       firstDate: DateTime(1950),
-      lastDate: DateTime.now()
-          .subtract(const Duration(days: 365 * 17)), // Min 17 years old
+      lastDate:
+          DateTime.now().subtract(const Duration(days: 365 * 17)), // Min 17 years old
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -127,7 +127,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => MainScreen()),
+            MaterialPageRoute(builder: (context) => const MainScreen()),
           );
         } else {
           _showSnackBar('Gagal menyimpan profil', isError: true);
@@ -402,8 +402,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 child: GestureDetector(
                   onTap: () => setState(() => _selectedGender = 'male'),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 16, horizontal: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                     decoration: BoxDecoration(
                       color: _selectedGender == 'male'
                           ? Colors.red.shade50
@@ -444,8 +443,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 child: GestureDetector(
                   onTap: () => setState(() => _selectedGender = 'female'),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 16, horizontal: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                     decoration: BoxDecoration(
                       color: _selectedGender == 'female'
                           ? Colors.red.shade50

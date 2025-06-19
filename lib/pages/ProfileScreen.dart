@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:siaga_darah/pages/LoginScreen.dart';
-import 'LoginScreen.dart'; // Ganti jika nama file login kamu berbeda
+// Ganti jika nama file login kamu berbeda
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
