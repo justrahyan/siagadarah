@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:siaga_darah/pages/home_page.dart';
 import 'package:siaga_darah/themes/theme.dart';
 import 'ProfileScreen.dart';
+import 'package:stylish_bottom_bar/stylish_bottom_bar.dart';
 
 // GlobalKey untuk mengakses MainScreen
 final GlobalKey<MainScreenState> menuScreenKey = GlobalKey<MainScreenState>();
@@ -36,15 +37,9 @@ class MainScreenState extends State<MainScreen> {
 
   final List<Map<String, dynamic>> menu = [
     {
-      'iconActive': 'assets/images/icon/beranda-primary.png',
-      'iconInactive': 'assets/images/icon/beranda-secondary.png',
-      'label': 'Beranda',
       'screen': const HomePage(),
     },
     {
-      'iconActive': 'assets/images/icon/event-primary.png',
-      'iconInactive': 'assets/images/icon/event-secondary.png',
-      'label': 'Event',
       'screen': const Center(
         child: Text(
           'Event',
@@ -54,8 +49,6 @@ class MainScreenState extends State<MainScreen> {
     },
     {
       'iconActive': 'assets/images/icon/butuh-darah.png',
-      'iconInactive': 'assets/images/icon/butuh-darah.png',
-      'label': 'Butuh Darah',
       'screen': const Center(
         child: Text(
           'Butuh Darah',
@@ -64,9 +57,6 @@ class MainScreenState extends State<MainScreen> {
       ),
     },
     {
-      'iconActive': 'assets/images/icon/riwayat-primary.png',
-      'iconInactive': 'assets/images/icon/riwayat-secondary.png',
-      'label': 'Riwayat',
       'screen': const Center(
         child: Text(
           'Riwayat',
@@ -75,9 +65,6 @@ class MainScreenState extends State<MainScreen> {
       ),
     },
     {
-      'iconActive': 'assets/images/icon/profil-primary.png',
-      'iconInactive': 'assets/images/icon/profil-secondary.png',
-      'label': 'Profil',
       'screen': const ProfileScreen(),
     },
   ];
@@ -137,118 +124,111 @@ class MainScreenState extends State<MainScreen> {
       body: menu[indexMenu]['screen'],
       backgroundColor: Colors.white,
       extendBody: true,
-      bottomNavigationBar: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.bottomCenter,
+      bottomNavigationBar: Container(
+        height: 70,
+        child: StylishBottomBar(
+          option: AnimatedBarOptions(
+            iconStyle: IconStyle.animated,
+            barAnimation: BarAnimation.fade,
+            iconSize: 26,
+            opacity: 0.2,
+          ),
+          currentIndex: indexMenu,
+          onTap: (index) {
+            setState(() {
+              indexMenu = index;
+            });
+          },
+          hasNotch: true,
+          notchStyle: NotchStyle.circle,
+          fabLocation: StylishBarFabLocation.center,
+          items: [
+            BottomBarItem(
+              icon: Image.asset('assets/images/icon/beranda-secondary.png',
+                  width: 26),
+              selectedIcon: Image.asset(
+                  'assets/images/icon/beranda-primary.png',
+                  width: 26),
+              title: Text('Beranda', style: GoogleFonts.poppins(fontSize: 12)),
+              backgroundColor: AppColors.primary,
+            ),
+            BottomBarItem(
+              icon: Image.asset('assets/images/icon/event-secondary.png',
+                  width: 26),
+              selectedIcon: Image.asset('assets/images/icon/event-primary.png',
+                  width: 26),
+              title: Text('Event', style: GoogleFonts.poppins(fontSize: 12)),
+              backgroundColor: AppColors.primary,
+            ),
+            BottomBarItem(
+              icon: const SizedBox.shrink(), // Kosong, diganti dengan FAB
+              title: const SizedBox.shrink(),
+              backgroundColor: AppColors.primary,
+            ),
+            BottomBarItem(
+              icon: Image.asset('assets/images/icon/riwayat-secondary.png',
+                  width: 26),
+              selectedIcon: Image.asset(
+                  'assets/images/icon/riwayat-primary.png',
+                  width: 26),
+              title: Text('Riwayat', style: GoogleFonts.poppins(fontSize: 12)),
+              backgroundColor: AppColors.primary,
+            ),
+            BottomBarItem(
+              icon: Image.asset('assets/images/icon/profil-secondary.png',
+                  width: 26),
+              selectedIcon: Image.asset('assets/images/icon/profil-primary.png',
+                  width: 26),
+              title: Text('Profil', style: GoogleFonts.poppins(fontSize: 12)),
+              backgroundColor: AppColors.primary,
+            ),
+          ],
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: Stack(
+        alignment: Alignment.center,
         children: [
-          // Custom painted navbar dengan cutout
+          // Background transparan bulat
           Container(
-            height: 70,
-            child: CustomPaint(
-              painter: NavbarCutoutPainter(),
-              size: Size(MediaQuery.of(context).size.width, 70),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 15),
-                child: Row(
-                  children: List.generate(menu.length, (index) {
-                    if (index == 2)
-                      return const SizedBox.shrink(); // Tombol tengah skip
-
-                    bool isActive = index == indexMenu;
-                    final item = menu[index];
-
-                    // Tambah jarak ekstra untuk index 1 dan 3
-                    EdgeInsets margin = EdgeInsets.zero;
-                    if (index == 1) margin = const EdgeInsets.only(right: 50);
-                    if (index == 3) margin = const EdgeInsets.only(left: 50);
-
-                    return Expanded(
-                      child: Container(
-                        margin: margin,
-                        child: InkWell(
-                          onTap: () {
-                            setState(() {
-                              indexMenu = index;
-                            });
-                          },
-                          child: SizedBox(
-                            height: 70,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.asset(
-                                  isActive
-                                      ? item['iconActive']
-                                      : item['iconInactive'],
-                                  width: 26,
-                                  height: 26,
-                                ),
-                                if (isActive)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text(
-                                      item['label'],
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-              ),
+            width: 84,
+            height: 84,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFCB0A4).withOpacity(0.5),
+              shape: BoxShape.circle,
             ),
           ),
 
-          // Efek semi-transparan (seperti substract) di belakang tombol
-          Positioned(
-            bottom: 25,
-            child: Container(
-              width: 90,
-              height: 90,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFCB0A4)
-                    .withOpacity(0.5), // merah transparan
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-
-          // Tombol tengah (Butuh Darah) - tanpa efek semi-transparan
-          Positioned(
-            bottom: 35,
-            child: GestureDetector(
-              onTap: () {
+          // FAB utama
+          SizedBox(
+            width: 68,
+            height: 68,
+            child: FloatingActionButton(
+              onPressed: () {
                 setState(() {
                   indexMenu = 2;
                 });
               },
-              child: Container(
+              backgroundColor: AppColors.primary,
+              elevation: 0,
+              shape: const CircleBorder(),
+              child: Image.asset(
+                menu[2]['iconActive'],
                 width: 72,
                 height: 72,
-                decoration: const BoxDecoration(
-                  color: AppColors.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset(
-                      indexMenu == 2
-                          ? menu[2]['iconActive']
-                          : menu[2]['iconInactive'],
-                      width: 64,
-                      height: 64,
+                errorBuilder: (context, error, stackTrace) {
+                  return Center(
+                    child: Text(
+                      'Butuh\nDarah',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
           ),
@@ -256,59 +236,4 @@ class MainScreenState extends State<MainScreen> {
       ),
     );
   }
-}
-
-class NavbarCutoutPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-
-    final path = Path();
-    final centerX = size.width / 2;
-    final cutoutRadius = 45.0;
-
-    // Menaikkan lubang: semakin besar offsetY, semakin ke atas
-    final cutoutYOffset = 0.0;
-
-    path.moveTo(0, size.height);
-    path.lineTo(0, 0);
-    path.lineTo(centerX - cutoutRadius, 0);
-
-    path.arcToPoint(
-      Offset(centerX + cutoutRadius, 0),
-      radius: Radius.circular(cutoutRadius),
-      clockwise: false,
-      // Titik awal dan akhir tetap di Y=0, tapi nanti kita geser bagian ini saja
-    );
-
-    path.lineTo(size.width, 0);
-    path.lineTo(size.width, size.height);
-    path.close();
-
-    // Hanya geser bagian potongan lubangnya ke atas
-    final pathWithCutoutLifted = Path();
-    pathWithCutoutLifted.moveTo(0, size.height);
-    pathWithCutoutLifted.lineTo(0, 0);
-    pathWithCutoutLifted.lineTo(centerX - cutoutRadius, 0);
-
-    // Ubah titik akhir Y-nya agar potongannya naik
-    pathWithCutoutLifted.arcToPoint(
-      Offset(centerX + cutoutRadius, 0),
-      radius: Radius.circular(cutoutRadius),
-      clockwise: false,
-    );
-
-    pathWithCutoutLifted.lineTo(size.width, 0);
-    pathWithCutoutLifted.lineTo(size.width, size.height);
-    pathWithCutoutLifted.close();
-
-    // Geser hanya bagian lengkung potongannya
-    canvas.drawPath(
-        pathWithCutoutLifted.shift(Offset(0, -cutoutYOffset)), paint);
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

@@ -69,17 +69,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (mounted) {
         if (userRole == 'admin') {
-          _showSnackBar('Selamat datang Admin!', isError: false);
+          // _showSnackBar('Selamat datang Admin!', isError: false);
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const AdminDashboard()),
+            MaterialPageRoute(
+              builder: (context) => const AdminMain(
+                showSuccessMessage: true,
+              ),
+            ),
             (Route<dynamic> route) => false,
           );
         } else {
-          _showSnackBar('Login berhasil!', isError: false);
+          // _showSnackBar('Login berhasil!', isError: false);
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
                 builder: (context) => const MainScreen(
-                      showSuccessMessage: false,
+                      showSuccessMessage: true,
                     )),
             (Route<dynamic> route) => false,
           );
@@ -196,11 +200,14 @@ class _LoginScreenState extends State<LoginScreen> {
       final result = await _authService.signInWithGoogle(isRegister: false);
 
       if (result.success && result.user != null) {
-        _showSnackBar('Login berhasil!', isError: false);
+        // _showSnackBar('Login berhasil!', isError: false);
         await Future.delayed(const Duration(milliseconds: 500));
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => MainScreen()),
+          MaterialPageRoute(
+              builder: (_) => MainScreen(
+                    showSuccessMessage: true,
+                  )),
         );
       } else {
         _showSnackBar(result.message ?? 'Login Google gagal.', isError: true);
