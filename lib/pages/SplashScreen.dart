@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:siaga_darah/dashboard/admin_main.dart';
+import 'package:siaga_darah/service/auth_service.dart';
 import 'package:siaga_darah/themes/colors.dart';
 import 'dart:async';
 import 'OnboardingScreen.dart';
@@ -113,21 +115,105 @@ class _SplashScreenState extends State<SplashScreen>
 
     final user = FirebaseAuth.instance.currentUser;
 
-    if (user != null && user.emailVerified) {
-      // Sudah login & email terverifikasi → ke MainScreen
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                const MainScreen(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: const Duration(milliseconds: 800),
-          ),
-        );
+    if (user != null) {
+      // Cek apakah user valid untuk auto-login
+      bool canAutoLogin = false;
+
+      // Google Sign-In users tidak perlu email verification
+      if (user.providerData
+          .any((provider) => provider.providerId == 'google.com')) {
+        canAutoLogin = true;
+      }
+      // Email/password users perlu email verification
+      else if (user.emailVerified) {
+        canAutoLogin = true;
+      }
+
+      if (canAutoLogin) {
+        // Sudah login & valid → cek role dulu
+        try {
+          final authService = AuthService();
+          final userRole = await authService.getUserRole(user.uid);
+
+          if (mounted) {
+            if (userRole == 'admin') {
+              // Jika admin → ke AdminMain
+              Navigator.pushReplacement(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      const AdminMain(),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                  transitionDuration: const Duration(milliseconds: 800),
+                ),
+              );
+            } else if (userRole == 'user') {
+              // Jika user biasa → ke MainScreen
+              Navigator.pushReplacement(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      const MainScreen(),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                  transitionDuration: const Duration(milliseconds: 800),
+                ),
+              );
+            } else {
+              // Role tidak dikenal → ke Onboarding
+              Navigator.pushReplacement(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      const OnboardingScreen(),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                  transitionDuration: const Duration(milliseconds: 800),
+                ),
+              );
+            }
+          }
+        } catch (e) {
+          print('Error checking user role: $e');
+          // Jika error → ke Onboarding
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    const OnboardingScreen(),
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+                transitionDuration: const Duration(milliseconds: 800),
+              ),
+            );
+          }
+        }
+      } else {
+        // User ada tapi tidak valid untuk auto-login → ke Onboarding
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) =>
+                  const OnboardingScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              transitionDuration: const Duration(milliseconds: 800),
+            ),
+          );
+        }
       }
     } else {
       // Belum login → ke Onboarding
